@@ -8,4 +8,59 @@
 
 body {
   margin: 0;
+  background: white;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.vm-blob {
+  will-change: transform;
+}
+
+.vm-blob-1 {
+  animation: vm-float-1 18s ease-in-out infinite;
+}
+
+.vm-blob-2 {
+  animation: vm-float-2 22s ease-in-out infinite;
+}
+
+.vm-blob-3 {
+  animation: vm-float-3 26s ease-in-out infinite;
+}
+
+@keyframes vm-float-1 {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(80px, 40px, 0) scale(1.08);
+  }
+}
+
+@keyframes vm-float-2 {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-70px, 60px, 0) scale(1.06);
+  }
+}
+
+@keyframes vm-float-3 {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(60px, -50px, 0) scale(1.1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vm-blob {
+    animation: none !important;
+  }
 }

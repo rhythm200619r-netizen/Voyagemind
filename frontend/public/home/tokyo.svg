@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" role="img" aria-label="Tokyo">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#60a5fa" stop-opacity="0.6"/>
+      <stop offset="1" stop-color="#60a5fa" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="800" fill="url(#sky)"/>
+  <circle cx="920" cy="200" r="140" fill="#38bdf8" opacity="0.25"/>
+  <rect x="0" y="420" width="1200" height="380" fill="#0b1220"/>
+
+  <!-- Simple skyline -->
+  <g fill="#111c30">
+    <rect x="80" y="320" width="120" height="480"/>
+    <rect x="220" y="260" width="160" height="540"/>
+    <rect x="410" y="360" width="110" height="440"/>
+    <rect x="540" y="300" width="180" height="500"/>
+    <rect x="750" y="250" width="140" height="550"/>
+    <rect x="910" y="340" width="190" height="460"/>
+  </g>
+
+  <!-- Windows -->
+  <g fill="#93c5fd" opacity="0.25">
+    <rect x="105" y="360" width="70" height="12"/>
+    <rect x="105" y="400" width="70" height="12"/>
+    <rect x="255" y="310" width="90" height="12"/>
+    <rect x="255" y="350" width="90" height="12"/>
+    <rect x="575" y="340" width="110" height="12"/>
+    <rect x="575" y="380" width="110" height="12"/>
+    <rect x="785" y="300" width="70" height="12"/>
+    <rect x="785" y="340" width="70" height="12"/>
+  </g>
+
+  <rect x="0" y="0" width="1200" height="800" fill="url(#glow)"/>
+
+  <!-- Label -->
+  <g font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto" fill="#e2e8f0">
+    <text x="56" y="98" font-size="56" font-weight="700">Tokyo</text>
+    <text x="56" y="146" font-size="22" opacity="0.85">Night markets • Museums • Street food</text>
+  </g>
+</svg>

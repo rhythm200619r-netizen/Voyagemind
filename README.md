@@ -31,6 +31,14 @@ This repo is an MVP scaffold:
      - `alter publication supabase_realtime add table public.agent_events;`
      - (optional) `alter publication supabase_realtime add table public.agent_runs;`
 
+## Run (one command)
+After you’ve configured the env files (see Backend + Frontend sections below), you can start everything with:
+
+- Windows PowerShell (from the `voyagemind/` folder):
+   - `powershell -ExecutionPolicy Bypass -File .\run.ps1`
+
+This starts the backend and frontend in two separate PowerShell windows and opens `http://localhost:5173`.
+
 ## Backend (FastAPI)
 From `backend/`:
 1. Create a virtual environment:
@@ -65,7 +73,13 @@ From `frontend/`:
 
 Open `http://localhost:5173`.
 
+Pages:
+- `/plan` — start a run + stream events
+- `/runs` — run history
+- `/runs/:runId` — run details
+- `/about` — about this MVP
+
 ## Notes / Next Steps
-- The current “multi-agent” logic is a placeholder in `backend/app/agents/orchestrator.py` that emits a few events. Swap it with CrewAI/LangGraph and real travel tools (Amadeus, weather, etc.).
-- The `user_memories` vector table is included in schema; wiring embeddings + retrieval is the next backend step.
+- The current “multi-agent” logic is a placeholder in `backend/app/agents/orchestrator.py` that emits a few events and generates a simple rule-based itinerary from the prompt. Swap it with CrewAI/LangGraph and real travel tools (Amadeus, weather, etc.).
+- The `user_memories` vector table is included in schema only; embeddings + retrieval are not wired yet (so it will stay empty unless you add that logic).
 - Security: the backend uses a **Supabase Service Role key**; do not expose it to the browser.

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    _ENV_PATH = Path(__file__).resolve().parents[1] / ".env"
+    model_config = SettingsConfigDict(env_file=str(_ENV_PATH), extra="ignore")
 
     app_env: str = "dev"
     app_host: str = "0.0.0.0"

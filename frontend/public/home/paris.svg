@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" role="img" aria-label="Paris">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#172554"/>
+    </linearGradient>
+    <linearGradient id="mist" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e2e8f0" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#e2e8f0" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="800" fill="url(#sky)"/>
+  <circle cx="310" cy="220" r="150" fill="#a78bfa" opacity="0.22"/>
+
+  <!-- Ground -->
+  <rect x="0" y="520" width="1200" height="280" fill="#0b1220"/>
+
+  <!-- Stylized tower -->
+  <g fill="none" stroke="#93c5fd" stroke-opacity="0.55" stroke-width="10" stroke-linecap="round">
+    <path d="M585 520 L650 300"/>
+    <path d="M715 520 L650 300"/>
+    <path d="M610 520 L650 380"/>
+    <path d="M690 520 L650 380"/>
+    <path d="M620 455 H680"/>
+    <path d="M600 520 H720"/>
+  </g>
+
+  <rect x="0" y="0" width="1200" height="800" fill="url(#mist)"/>
+
+  <!-- Label -->
+  <g font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto" fill="#e2e8f0">
+    <text x="56" y="98" font-size="56" font-weight="700">Paris</text>
+    <text x="56" y="146" font-size="22" opacity="0.85">Cafés • Art • Walkable neighborhoods</text>
+  </g>
+</svg>

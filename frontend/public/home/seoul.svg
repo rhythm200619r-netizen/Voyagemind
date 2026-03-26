@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" role="img" aria-label="Seoul">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#064e3b"/>
+    </linearGradient>
+    <linearGradient id="haze" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#34d399" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#34d399" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="800" fill="url(#sky)"/>
+  <circle cx="930" cy="230" r="150" fill="#34d399" opacity="0.2"/>
+
+  <!-- Hills -->
+  <path d="M0 560 C220 470, 420 680, 640 560 C820 470, 980 610, 1200 520 L1200 800 L0 800 Z" fill="#0b1220"/>
+
+  <!-- City blocks -->
+  <g fill="#111c30">
+    <rect x="90" y="470" width="160" height="330"/>
+    <rect x="280" y="420" width="120" height="380"/>
+    <rect x="420" y="500" width="170" height="300"/>
+    <rect x="620" y="440" width="130" height="360"/>
+    <rect x="780" y="490" width="170" height="310"/>
+  </g>
+  <g fill="#a7f3d0" opacity="0.25">
+    <rect x="115" y="510" width="110" height="12"/>
+    <rect x="115" y="550" width="110" height="12"/>
+    <rect x="305" y="470" width="70" height="12"/>
+    <rect x="305" y="510" width="70" height="12"/>
+    <rect x="645" y="490" width="90" height="12"/>
+    <rect x="645" y="530" width="90" height="12"/>
+  </g>
+
+  <rect x="0" y="0" width="1200" height="800" fill="url(#haze)"/>
+
+  <!-- Label -->
+  <g font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto" fill="#e2e8f0">
+    <text x="56" y="98" font-size="56" font-weight="700">Seoul</text>
+    <text x="56" y="146" font-size="22" opacity="0.85">Street food • Night views • Culture</text>
+  </g>
+</svg>
