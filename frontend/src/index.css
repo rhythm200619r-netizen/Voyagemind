@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light;
+  color-scheme: light dark;
 }
 
 body {
@@ -11,6 +11,11 @@ body {
   background: white;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Chromium (incl. Brave) date input icon can be hard to see in dark UIs */
+.dark input[type='date'] {
+  color-scheme: dark;
 }
 
 .vm-blob {

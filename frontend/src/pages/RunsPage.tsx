@@ -59,30 +59,33 @@ export default function RunsPage() {
     <div className="grid gap-6">
       <section className="grid gap-2">
         <h1 className="text-2xl font-semibold">Runs</h1>
-        <p className="text-sm text-slate-600">Recent agent runs stored in Supabase.</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400">Recent agent runs stored in Supabase.</p>
       </section>
 
       {error ? <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</div> : null}
 
-      <section className="rounded-lg border border-slate-200 bg-white">
-        <div className="border-b border-slate-200 p-4">
+      <section className="rounded-lg border border-slate-200 bg-white dark:border-white/10 dark:bg-slate-950">
+        <div className="border-b border-slate-200 p-4 dark:border-white/10">
           <div className="text-sm font-semibold">Recent runs</div>
-          <div className="mt-1 text-xs text-slate-600">Showing up to 25</div>
+          <div className="mt-1 text-xs text-slate-600 dark:text-slate-400">Showing up to 25</div>
         </div>
 
         <div className="p-4">
           {isLoading ? (
-            <div className="text-sm text-slate-600">Loading…</div>
+            <div className="text-sm text-slate-600 dark:text-slate-400">Loading…</div>
           ) : sortedRuns.length === 0 ? (
-            <div className="text-sm text-slate-600">No runs yet.</div>
+            <div className="text-sm text-slate-600 dark:text-slate-400">No runs yet.</div>
           ) : (
             <ul className="grid gap-2">
               {sortedRuns.map((run) => (
-                <li key={run.id} className="rounded-md border border-slate-200 p-3 hover:bg-slate-50">
+                <li
+                  key={run.id}
+                  className="rounded-md border border-slate-200 p-3 hover:bg-slate-50 dark:border-white/10 dark:hover:bg-slate-900/40"
+                >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="truncate text-sm font-medium text-slate-900">{run.prompt}</div>
-                      <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
+                      <div className="truncate text-sm font-medium text-slate-900 dark:text-slate-50">{run.prompt}</div>
+                      <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-slate-400">
                         <span className="font-mono">{run.id}</span>
                         <span>{new Date(run.created_at).toLocaleString()}</span>
                         <span>Status: {run.status}</span>
@@ -90,7 +93,7 @@ export default function RunsPage() {
                     </div>
                     <Link
                       to={`/runs/${run.id}`}
-                      className="shrink-0 rounded-md bg-slate-900 px-3 py-2 text-xs font-medium text-white"
+                      className="shrink-0 rounded-md bg-slate-900 px-3 py-2 text-xs font-medium text-white dark:bg-white dark:text-slate-900"
                     >
                       View
                     </Link>

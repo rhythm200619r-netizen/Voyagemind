@@ -155,6 +155,102 @@ def _build_itinerary(*, days: int, destination: str | None, interests: list[str]
     return itinerary
 
 
+def _split_budget(total_budget: int | None) -> dict[str, int] | None:
+    if total_budget is None or total_budget <= 0:
+        return None
+    # Default: simple 50/50 split.
+    flight_budget = int(total_budget * 0.5)
+    hotel_budget = max(0, total_budget - flight_budget)
+    return {"total": total_budget, "flight": flight_budget, "hotel": hotel_budget}
+
+
+def _build_flight_options(*, destination: str | None, dates: dict[str, str], flight_budget: int | None) -> list[dict[str, Any]]:
+    if destination is None:
+        return []
+
+    depart = dates.get("depart")
+    ret = dates.get("return")
+
+    # Price bands scale loosely with budget; still works if budget missing.
+    base = 420
+    if flight_budget is not None:
+        base = max(160, min(int(flight_budget * 0.9), 1400))
+
+    options: list[dict[str, Any]] = []
+    candidates = [
+        ("EconoFlex", base - 60, 1, "07:30", "12:05"),
+        ("SkySaver", base, 1, "10:10", "15:00"),
+        ("PrimeAir", base + 120, 0, "14:20", "19:05"),
+    ]
+
+    for carrier, price, stops, depart_time, arrive_time in candidates:
+        if flight_budget is not None and price > flight_budget:
+            continue
+        options.append(
+            {
+                "carrier": carrier,
+                "route": f"Origin → {destination}",
+                "depart_date": depart,
+                "return_date": ret,
+                "depart_time": depart_time,
+                "arrive_time": arrive_time,
+                "stops": stops,
+                "price_usd": price,
+            }
+        )
+
+    return options
+
+
+def _build_hotel_options(*, destination: str | None, dates: dict[str, str], hotel_budget: int | None, days: int) -> list[dict[str, Any]]:
+    if destination is None:
+        return []
+
+    check_in = dates.get("check_in")
+    check_out = dates.get("check_out")
+
+    # Approx nights: if no explicit stay dates, assume days-1 nights (min 1).
+    nights = 1
+    if days and days > 1:
+        nights = days - 1
+
+    # Choose a per-night target based on budget.
+    per_night_cap: int | None = None
+    if hotel_budget is not None:
+        per_night_cap = max(50, int(hotel_budget / max(1, nights)))
+
+    base = 120
+    if per_night_cap is not None:
+        base = max(60, min(int(per_night_cap * 0.9), 420))
+
+    candidates = [
+        (f"{destination} Central Stay", "Central", base + 20, 8.6, ["Walkable", "Great transit"]),
+        (f"{destination} Transit Hub Hotel", "Transit hub", base, 8.2, ["Easy connections", "Value"]),
+        (f"{destination} Budget Comfort", "Budget area", base - 25, 7.8, ["Simple", "Good reviews"]),
+    ]
+
+    options: list[dict[str, Any]] = []
+    for name, area, nightly, rating, perks in candidates:
+        total = nightly * nights
+        if hotel_budget is not None and total > hotel_budget:
+            continue
+        options.append(
+            {
+                "name": name,
+                "area": area,
+                "check_in": check_in,
+                "check_out": check_out,
+                "nights": nights,
+                "nightly_usd": nightly,
+                "total_usd": total,
+                "rating": rating,
+                "perks": perks,
+            }
+        )
+
+    return options
+
+
 def run_orchestration(*, supabase: Client, run_id: str, prompt: str) -> None:
     """Toy multi-agent runner.
 
@@ -272,6 +368,37 @@ def run_orchestration(*, supabase: Client, run_id: str, prompt: str) -> None:
     dates = _extract_dates(prompt)
     itinerary = _build_itinerary(days=days, destination=destination, interests=interests, budget=budget)
 
+    budget_split = _split_budget(budget)
+
+    emit(
+        "Budget Analyst",
+        "agent_report",
+        "Allocated budget across flights and hotels",
+        {"budget": budget, "split": budget_split},
+    )
+    time.sleep(0.3)
+
+    flight_budget = budget_split["flight"] if budget_split else None
+    hotel_budget = budget_split["hotel"] if budget_split else None
+    flight_options = _build_flight_options(destination=destination, dates=dates, flight_budget=flight_budget)
+    hotel_options = _build_hotel_options(destination=destination, dates=dates, hotel_budget=hotel_budget, days=days)
+
+    emit(
+        "Flight Negotiator",
+        "agent_report",
+        "Generated flight options within budget split",
+        {"budget_flight": flight_budget, "flight_options": flight_options},
+    )
+    time.sleep(0.3)
+
+    emit(
+        "Accommodation Scout",
+        "agent_report",
+        "Generated hotel options within budget split",
+        {"budget_hotel": hotel_budget, "hotel_options": hotel_options},
+    )
+    time.sleep(0.3)
+
     emit(
         "Orchestrator",
         "result",
@@ -280,8 +407,11 @@ def run_orchestration(*, supabase: Client, run_id: str, prompt: str) -> None:
             "destination": destination,
             "days": days,
             "budget_usd": budget,
+            "budget_split": budget_split,
             "interests": interests,
             "dates": dates,
+            "flight_options": flight_options,
+            "hotel_options": hotel_options,
             "itinerary": itinerary,
         },
     )

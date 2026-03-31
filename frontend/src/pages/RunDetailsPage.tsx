@@ -131,39 +131,39 @@ export default function RunDetailsPage() {
 
       {error ? <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</div> : null}
 
-      <section className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4">
+      <section className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-slate-950">
         {isLoading ? (
-          <div className="text-sm text-slate-600">Loading…</div>
+          <div className="text-sm text-slate-600 dark:text-slate-400">Loading…</div>
         ) : run ? (
           <>
             <div className="text-sm font-semibold">Prompt</div>
-            <div className="whitespace-pre-wrap text-sm text-slate-800">{run.prompt}</div>
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
+            <div className="whitespace-pre-wrap text-sm text-slate-800 dark:text-slate-200">{run.prompt}</div>
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-slate-400">
               <span>{new Date(run.created_at).toLocaleString()}</span>
               <span>Status: {run.status}</span>
             </div>
           </>
         ) : (
-          <div className="text-sm text-slate-600">Run not found (or not readable).</div>
+          <div className="text-sm text-slate-600 dark:text-slate-400">Run not found (or not readable).</div>
         )}
       </section>
 
-      <section className="rounded-lg border border-slate-200 bg-white">
-        <div className="flex items-center justify-between border-b border-slate-200 p-4">
+      <section className="rounded-lg border border-slate-200 bg-white dark:border-white/10 dark:bg-slate-950">
+        <div className="flex items-center justify-between border-b border-slate-200 p-4 dark:border-white/10">
           <h2 className="text-sm font-semibold">Agent events</h2>
-          <span className="text-xs text-slate-600">Streaming via Supabase Realtime</span>
+          <span className="text-xs text-slate-600 dark:text-slate-400">Streaming via Supabase Realtime</span>
         </div>
 
         <div className="max-h-[60vh] overflow-auto p-4">
           {sortedEvents.length === 0 ? (
-            <div className="text-sm text-slate-600">No events yet.</div>
+            <div className="text-sm text-slate-600 dark:text-slate-400">No events yet.</div>
           ) : (
             <ul className="grid gap-3">
               {sortedEvents.map((ev) => (
-                <li key={ev.id} className="rounded-md bg-slate-50 p-3">
+                <li key={ev.id} className="rounded-md bg-slate-50 p-3 dark:bg-slate-900/40">
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <span className="text-xs font-semibold text-slate-800">{ev.agent_name}</span>
-                    <span className="text-xs text-slate-600">{new Date(ev.created_at).toLocaleTimeString()}</span>
+                    <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">{ev.agent_name}</span>
+                    <span className="text-xs text-slate-600 dark:text-slate-400">{new Date(ev.created_at).toLocaleTimeString()}</span>
                     <span className={`rounded px-2 py-0.5 text-xs ring-1 ${badgeClassForEventType(ev.event_type)}`}>
                       {ev.event_type}
                     </span>
@@ -174,7 +174,7 @@ export default function RunDetailsPage() {
                     const itinerary = getItinerary(ev.payload)
                     if (!itinerary) {
                       return (
-                        <pre className="mt-2 overflow-auto rounded bg-white p-2 text-xs ring-1 ring-slate-200">
+                        <pre className="mt-2 overflow-auto rounded bg-white p-2 text-xs ring-1 ring-slate-200 dark:bg-slate-950 dark:ring-white/10">
                           {JSON.stringify(ev.payload, null, 2)}
                         </pre>
                       )
@@ -186,20 +186,20 @@ export default function RunDetailsPage() {
 
                     return (
                       <div className="mt-3 grid gap-2">
-                        <div className="rounded-md bg-white p-3 ring-1 ring-slate-200">
-                          <div className="text-xs font-semibold text-slate-900">Itinerary summary</div>
-                          <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-700">
+                        <div className="rounded-md bg-white p-3 ring-1 ring-slate-200 dark:bg-slate-950 dark:ring-white/10">
+                          <div className="text-xs font-semibold text-slate-900 dark:text-slate-50">Itinerary summary</div>
+                          <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-700 dark:text-slate-300">
                             {destination ? <span>Destination: {destination}</span> : null}
                             {days ? <span>Days: {days}</span> : null}
                             {budget ? <span>Budget: ${budget}</span> : null}
                           </div>
                         </div>
                         {itinerary.map((item) => (
-                          <div key={item.day} className="rounded-md bg-white p-3 ring-1 ring-slate-200">
-                            <div className="text-sm font-semibold text-slate-900">
+                          <div key={item.day} className="rounded-md bg-white p-3 ring-1 ring-slate-200 dark:bg-slate-950 dark:ring-white/10">
+                            <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">
                               Day {item.day}{item.title ? ` — ${item.title}` : ''}
                             </div>
-                            {item.notes ? <div className="mt-1 text-sm text-slate-700">{item.notes}</div> : null}
+                            {item.notes ? <div className="mt-1 text-sm text-slate-700 dark:text-slate-300">{item.notes}</div> : null}
                           </div>
                         ))}
                       </div>

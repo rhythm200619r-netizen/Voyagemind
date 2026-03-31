@@ -59,7 +59,7 @@ export default function SearchCard({ defaultMode = 'flights', modes, onSearch, i
   const showTabs = availableModes.length > 1
 
   return (
-    <div className="rounded-xl border border-white/10 bg-white/10 p-4 backdrop-blur">
+    <div className="rounded-xl border border-white/10 bg-white/10 p-4 backdrop-blur dark:border-white/10 dark:bg-white/5">
       {showTabs ? (
         <div className="flex items-center gap-2">
           {availableModes.includes('flights') ? (
@@ -75,13 +75,14 @@ export default function SearchCard({ defaultMode = 'flights', modes, onSearch, i
         </div>
       ) : null}
 
-      <div className="mt-4 grid gap-3 rounded-lg bg-white p-4">
+      <div className="mt-4 grid gap-3 rounded-lg bg-white p-4 dark:bg-slate-950 dark:ring-1 dark:ring-white/10">
         {mode === 'flights' ? (
-          <div className="grid gap-3 md:grid-cols-6">
+          <div className="grid gap-3">
+            <div className="grid gap-3 md:grid-cols-4">
               <label className="grid gap-1">
                 <span className="text-xs font-semibold text-slate-600">From</span>
                 <input
-                  className="rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-slate-200"
+                  className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-slate-200 dark:border-white/10 dark:bg-slate-900/60 dark:text-slate-50 dark:placeholder:text-slate-400 dark:focus:ring-white/15"
                   value={fromCity}
                   onChange={(e) => setFromCity(e.target.value)}
                   placeholder="City / Airport"
@@ -90,7 +91,7 @@ export default function SearchCard({ defaultMode = 'flights', modes, onSearch, i
               <label className="grid gap-1">
                 <span className="text-xs font-semibold text-slate-600">To</span>
                 <input
-                  className="rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-slate-200"
+                  className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-slate-200 dark:border-white/10 dark:bg-slate-900/60 dark:text-slate-50 dark:placeholder:text-slate-400 dark:focus:ring-white/15"
                   value={toCity}
                   onChange={(e) => setToCity(e.target.value)}
                   placeholder="City / Airport"
@@ -99,7 +100,7 @@ export default function SearchCard({ defaultMode = 'flights', modes, onSearch, i
               <label className="grid gap-1">
                 <span className="text-xs font-semibold text-slate-600">Depart</span>
                 <input
-                  className="rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-slate-200"
+                  className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-slate-200 dark:border-white/10 dark:bg-slate-900/60 dark:text-slate-50 dark:focus:ring-white/15"
                   type="date"
                   value={departDate}
                   onChange={(e) => setDepartDate(e.target.value)}
@@ -108,16 +109,19 @@ export default function SearchCard({ defaultMode = 'flights', modes, onSearch, i
               <label className="grid gap-1">
                 <span className="text-xs font-semibold text-slate-600">Return</span>
                 <input
-                  className="rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-slate-200"
+                  className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-slate-200 dark:border-white/10 dark:bg-slate-900/60 dark:text-slate-50 dark:focus:ring-white/15"
                   type="date"
                   value={returnDate}
                   onChange={(e) => setReturnDate(e.target.value)}
                 />
               </label>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
               <label className="grid gap-1">
                 <span className="text-xs font-semibold text-slate-600">Travelers</span>
                 <input
-                  className="rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-slate-200"
+                  className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-slate-200 dark:border-white/10 dark:bg-slate-900/60 dark:text-slate-50 dark:placeholder:text-slate-400 dark:focus:ring-white/15"
                   type="number"
                   min={1}
                   max={9}
@@ -128,19 +132,20 @@ export default function SearchCard({ defaultMode = 'flights', modes, onSearch, i
               <label className="grid gap-1">
                 <span className="text-xs font-semibold text-slate-600">Budget (USD)</span>
                 <input
-                  className="rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-slate-200"
+                  className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-slate-200 dark:border-white/10 dark:bg-slate-900/60 dark:text-slate-50 dark:placeholder:text-slate-400 dark:focus:ring-white/15"
                   value={budget}
                   onChange={(e) => setBudget(e.target.value)}
                   placeholder="1200"
                 />
               </label>
             </div>
+          </div>
         ) : (
           <div className="grid gap-3 md:grid-cols-4">
               <label className="grid gap-1">
                 <span className="text-xs font-semibold text-slate-600">City</span>
                 <input
-                  className="rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-slate-200"
+                  className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-slate-200 dark:border-white/10 dark:bg-slate-900/60 dark:text-slate-50 dark:placeholder:text-slate-400 dark:focus:ring-white/15"
                   value={toCity}
                   onChange={(e) => setToCity(e.target.value)}
                   placeholder="Where are you staying?"
@@ -149,7 +154,7 @@ export default function SearchCard({ defaultMode = 'flights', modes, onSearch, i
               <label className="grid gap-1">
                 <span className="text-xs font-semibold text-slate-600">Check-in</span>
                 <input
-                  className="rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-slate-200"
+                  className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-slate-200 dark:border-white/10 dark:bg-slate-900/60 dark:text-slate-50 dark:placeholder:text-slate-400 dark:focus:ring-white/15"
                   type="date"
                   value={checkIn}
                   onChange={(e) => setCheckIn(e.target.value)}
@@ -158,7 +163,7 @@ export default function SearchCard({ defaultMode = 'flights', modes, onSearch, i
               <label className="grid gap-1">
                 <span className="text-xs font-semibold text-slate-600">Check-out</span>
                 <input
-                  className="rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-slate-200"
+                  className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-slate-200 dark:border-white/10 dark:bg-slate-900/60 dark:text-slate-50 dark:placeholder:text-slate-400 dark:focus:ring-white/15"
                   type="date"
                   value={checkOut}
                   onChange={(e) => setCheckOut(e.target.value)}
@@ -167,7 +172,7 @@ export default function SearchCard({ defaultMode = 'flights', modes, onSearch, i
               <label className="grid gap-1">
                 <span className="text-xs font-semibold text-slate-600">Guests</span>
                 <input
-                  className="rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-slate-200"
+                  className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-slate-200 dark:border-white/10 dark:bg-slate-900/60 dark:text-slate-50 dark:placeholder:text-slate-400 dark:focus:ring-white/15"
                   type="number"
                   min={1}
                   max={9}
@@ -182,7 +187,7 @@ export default function SearchCard({ defaultMode = 'flights', modes, onSearch, i
           <label className="grid gap-1">
             <span className="text-xs font-semibold text-slate-600">Interests / vibe</span>
             <input
-              className="rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-slate-200"
+              className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-slate-200 dark:border-white/10 dark:bg-slate-900/60 dark:text-slate-50 dark:placeholder:text-slate-400 dark:focus:ring-white/15"
               value={interests}
               onChange={(e) => setInterests(e.target.value)}
               placeholder="food, museums, nightlife…"
@@ -191,7 +196,7 @@ export default function SearchCard({ defaultMode = 'flights', modes, onSearch, i
 
           <button
             type="button"
-            className="mt-5 rounded-md bg-blue-600 px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            className="mt-5 rounded-md bg-blue-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-blue-500 active:bg-blue-700 disabled:opacity-60 disabled:hover:bg-blue-600"
             onClick={() => onSearch({ mode, prompt })}
             disabled={Boolean(isLoading) || prompt.trim().length === 0}
           >
