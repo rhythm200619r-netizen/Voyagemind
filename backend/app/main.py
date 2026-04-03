@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -120,13 +120,51 @@ class MockIngestResponse(BaseModel):
     run_id: str
 
 
+def _get_user_id_from_auth_header(authorization: str | None) -> str:
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+
+    prefix = "Bearer "
+    if not authorization.startswith(prefix):
+        raise HTTPException(status_code=401, detail="Invalid authorization scheme")
+
+    token = authorization[len(prefix) :].strip()
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing bearer token")
+
+    try:
+        supabase = get_supabase_admin_client()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    try:
+        auth_response = supabase.auth.get_user(token)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=401, detail=f"Invalid auth token: {exc}") from exc
+
+    user = getattr(auth_response, "user", None)
+    user_id = getattr(user, "id", None)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid auth token")
+    return str(user_id)
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
 @app.post("/runs", response_model=CreateRunResponse)
-def create_run(req: CreateRunRequest, background: BackgroundTasks) -> CreateRunResponse:
+def create_run(
+    req: CreateRunRequest,
+    background: BackgroundTasks,
+    authorization: str | None = Header(default=None),
+) -> CreateRunResponse:
+    user_id = _get_user_id_from_auth_header(authorization)
+
+    if req.user_id and req.user_id != user_id:
+        raise HTTPException(status_code=403, detail="You can only create runs for your own account")
+
     try:
         supabase = get_supabase_admin_client()
     except RuntimeError as exc:
@@ -136,9 +174,8 @@ def create_run(req: CreateRunRequest, background: BackgroundTasks) -> CreateRunR
         "prompt": req.prompt,
         "status": "queued",
         "metadata": req.metadata,
+        "user_id": user_id,
     }
-    if req.user_id:
-        insert_payload["user_id"] = req.user_id
     if req.orchestrator_persona:
         insert_payload["orchestrator_persona"] = req.orchestrator_persona
 
@@ -169,15 +206,48 @@ def create_run(req: CreateRunRequest, background: BackgroundTasks) -> CreateRunR
 
 
 @app.get("/runs/{run_id}")
-def get_run(run_id: str) -> dict[str, Any]:
+def get_run(run_id: str, authorization: str | None = Header(default=None)) -> dict[str, Any]:
+    user_id = _get_user_id_from_auth_header(authorization)
+
     try:
         supabase = get_supabase_admin_client()
     except RuntimeError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-    res = supabase.table("agent_runs").select("*").eq("id", run_id).maybe_single().execute()
+
+    res = (
+        supabase.table("agent_runs")
+        .select("*")
+        .eq("id", run_id)
+        .eq("user_id", user_id)
+        .maybe_single()
+        .execute()
+    )
     if not res.data:
         raise HTTPException(status_code=404, detail="Run not found")
     return res.data
+
+
+@app.get("/runs")
+def list_runs(
+    authorization: str | None = Header(default=None),
+    limit: int = Query(default=20, ge=1, le=100),
+) -> dict[str, Any]:
+    user_id = _get_user_id_from_auth_header(authorization)
+
+    try:
+        supabase = get_supabase_admin_client()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    res = (
+        supabase.table("agent_runs")
+        .select("id,created_at,prompt,status,orchestrator_persona,metadata")
+        .eq("user_id", user_id)
+        .order("created_at", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    return {"runs": res.data or []}
 
 
 def _placeholder_embedding_1536(text: str) -> list[float]:

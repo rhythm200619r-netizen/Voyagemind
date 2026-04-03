@@ -1,16 +1,23 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
+import { useAuth } from '../auth/AuthContext'
 import SearchCard from '../components/SearchCard'
 import { createRun } from '../lib/api'
 import { supabase, supabaseConfigError } from '../supabase'
 
 export default function FlightsPage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [isStarting, setIsStarting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function handleSearch(params: { mode: 'flights' | 'stays'; prompt: string }) {
+    if (!user) {
+      navigate('/login')
+      return
+    }
+
     if (supabaseConfigError || !supabase) {
       setError(supabaseConfigError ?? 'Supabase client is not configured')
       return

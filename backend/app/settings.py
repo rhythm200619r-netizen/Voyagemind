@@ -12,7 +12,10 @@ class Settings(BaseSettings):
     app_env: str = "dev"
     app_host: str = "0.0.0.0"
     app_port: int = 8000
-    cors_origins: str = "http://localhost:5173"
+    cors_origins: str = (
+        "http://localhost:5173,http://localhost:5174,"
+        "http://127.0.0.1:5173,http://127.0.0.1:5174"
+    )
 
     # Keep these optional so the server can boot even if .env isn't configured yet.
     # Requests that need Supabase will return a clear error.

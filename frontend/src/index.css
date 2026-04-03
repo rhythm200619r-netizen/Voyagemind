@@ -1,21 +1,251 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=Playfair+Display:ital,wght@0,500;0,700;1,400&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  color-scheme: light dark;
+  color-scheme: dark;
+  --ink: #0a0a0f;
+  --parchment: #f5f0e8;
+  --amber: #d4883a;
+  --amber-glow: rgba(212, 136, 58, 0.15);
+  --brass: #b8924a;
+  --fog: rgba(255, 255, 255, 0.04);
+  --fog-border: rgba(255, 255, 255, 0.08);
+  --muted: rgba(255, 255, 255, 0.45);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --page-bg: #0a0a0f;
+  --page-text: #e8e4dc;
+  --surface: rgba(255, 255, 255, 0.04);
+  --surface-strong: rgba(10, 10, 15, 0.94);
+  --surface-soft: rgba(255, 255, 255, 0.06);
+  --surface-border: rgba(255, 255, 255, 0.08);
+  --body-muted: rgba(255, 255, 255, 0.45);
+}
+
+:root:not(.dark) {
+  color-scheme: light;
+  --page-bg: #f6f1ea;
+  --page-text: #1a1620;
+  --surface: rgba(255, 255, 255, 0.78);
+  --surface-strong: rgba(255, 255, 255, 0.92);
+  --surface-soft: rgba(10, 10, 15, 0.05);
+  --surface-border: rgba(10, 10, 15, 0.08);
+  --body-muted: rgba(10, 10, 15, 0.55);
+}
+
+html {
+  background: var(--page-bg);
 }
 
 body {
   margin: 0;
-  background: white;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top, color-mix(in srgb, var(--amber) 18%, transparent), transparent 32%),
+    radial-gradient(circle at 80% 10%, color-mix(in srgb, var(--brass) 12%, transparent), transparent 24%),
+    var(--page-bg);
+  color: var(--page-text);
+  font-family: 'DM Sans', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Chromium (incl. Brave) date input icon can be hard to see in dark UIs */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.4;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256' viewBox='0 0 256 256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23n)' opacity='0.65'/%3E%3C/svg%3E");
+}
+
+h1,
+h2,
+.display {
+  font-family: 'Playfair Display', serif;
+  letter-spacing: -0.02em;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(212, 136, 58, 0.3);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 136, 58, 0.55);
+}
+
 .dark input[type='date'] {
   color-scheme: dark;
+}
+
+.stagger > * {
+  animation: fadeUp 0.55s var(--ease-out) both;
+}
+
+.theme-surface {
+  background: var(--surface);
+  border-color: var(--surface-border);
+  color: var(--page-text);
+}
+
+.theme-surface-strong {
+  background: var(--surface-strong);
+  border-color: var(--surface-border);
+  color: var(--page-text);
+}
+
+.theme-muted {
+  color: var(--body-muted);
+}
+
+.theme-heading {
+  color: var(--page-text);
+}
+
+.theme-accent {
+  color: var(--amber);
+}
+
+.stagger > *:nth-child(1) { animation-delay: 0ms; }
+.stagger > *:nth-child(2) { animation-delay: 60ms; }
+.stagger > *:nth-child(3) { animation-delay: 120ms; }
+.stagger > *:nth-child(4) { animation-delay: 180ms; }
+.stagger > *:nth-child(5) { animation-delay: 240ms; }
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0px);
+  }
+}
+
+@keyframes orbPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 8px rgba(212, 136, 58, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 24px rgba(212, 136, 58, 0.9), inset 0 1px 2px rgba(255, 255, 255, 0.3);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+@keyframes drawCheck {
+  from {
+    stroke-dashoffset: 24;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes errorShake {
+  0%,
+  100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+}
+
+@keyframes flicker {
+  0%,
+  100% { opacity: 1; }
+  50% { opacity: 0.72; }
+}
+
+@layer components {
+  .vm-primary-button {
+    position: relative;
+    overflow: hidden;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--amber), var(--brass));
+    color: #130d07;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.15),
+      0 4px 16px rgba(212, 136, 58, 0.3);
+    transition: transform 80ms var(--ease-out), box-shadow 200ms var(--ease-smooth), filter 200ms var(--ease-smooth);
+  }
+
+  .vm-primary-button:hover {
+    filter: brightness(1.04);
+  }
+
+  .vm-primary-button:active {
+    transform: scale(0.97);
+  }
+
+  .vm-primary-button.is-loading::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(110deg, transparent 18%, rgba(255, 255, 255, 0.28) 40%, transparent 62%);
+    background-size: 220% 100%;
+    animation: shimmer 1.1s linear infinite;
+    pointer-events: none;
+  }
+
+  .vm-field {
+    width: 100%;
+    border-radius: 16px;
+    border: 1px solid var(--fog-border);
+    background: var(--surface);
+    color: var(--page-text);
+    caret-color: var(--amber);
+    transition: border-color 200ms var(--ease-smooth), box-shadow 200ms var(--ease-smooth), transform 200ms var(--ease-smooth);
+  }
+
+  .vm-field:focus {
+    border-color: var(--amber);
+    box-shadow: 0 0 0 1px rgba(212, 136, 58, 0.15), 0 0 0 4px rgba(212, 136, 58, 0.12);
+    outline: none;
+  }
+
+  .vm-floating-label {
+    pointer-events: none;
+    position: absolute;
+    left: 1rem;
+    top: 0.95rem;
+    transform-origin: left top;
+    color: var(--muted);
+    transition: transform 200ms var(--ease-smooth), color 200ms var(--ease-smooth), opacity 200ms var(--ease-smooth);
+  }
+
+  .vm-floating-label.is-active {
+    transform: translateY(-0.85rem) scale(0.78);
+    color: rgba(212, 136, 58, 0.92);
+    opacity: 1;
+  }
 }
 
 .vm-blob {
@@ -36,36 +266,29 @@ body {
 
 @keyframes vm-float-1 {
   0%,
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(80px, 40px, 0) scale(1.08);
-  }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(80px, 40px, 0) scale(1.08); }
 }
 
 @keyframes vm-float-2 {
   0%,
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(-70px, 60px, 0) scale(1.06);
-  }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-70px, 60px, 0) scale(1.06); }
 }
 
 @keyframes vm-float-3 {
   0%,
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(60px, -50px, 0) scale(1.1);
-  }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(60px, -50px, 0) scale(1.1); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .vm-blob {
-    animation: none !important;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

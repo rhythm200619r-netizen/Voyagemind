@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { Link, useParams } from 'react-router-dom'
 
+import { useAuth } from '../auth/AuthContext'
 import { supabase, supabaseConfigError } from '../supabase'
 import { badgeClassForEventType, getItinerary, type AgentEvent } from '../lib/agentEvents'
 
@@ -17,6 +18,7 @@ type InsertPayload<T> = {
 }
 
 export default function RunDetailsPage() {
+  const { user } = useAuth()
   const params = useParams<{ runId: string }>()
   const runId = params.runId ?? ''
 
@@ -50,6 +52,11 @@ export default function RunDetailsPage() {
   useEffect(() => {
     async function load() {
       if (!runId) return
+      if (!user) {
+        setRun(null)
+        setEvents([])
+        return
+      }
       if (!canRead) {
         setError(supabaseConfigError ?? 'Supabase client is not configured')
         return
@@ -79,6 +86,20 @@ export default function RunDetailsPage() {
       }
 
       try {
+        const runLookup = await sb
+          .from('agent_runs')
+          .select('id')
+          .eq('id', runId)
+          .eq('user_id', user.id)
+          .limit(1)
+
+        if (runLookup.error) throw runLookup.error
+        if (!runLookup.data?.length) {
+          setRun(null)
+          setEvents([])
+          return
+        }
+
         const channel = sb
           .channel(`agent-events-${runId}`)
           .on(
@@ -96,7 +117,7 @@ export default function RunDetailsPage() {
         channelRef.current = channel
 
         const [{ data: runRows, error: runErr }, { data: eventRows, error: eventErr }] = await Promise.all([
-          sb.from('agent_runs').select('id,created_at,prompt,status').eq('id', runId).limit(1),
+          sb.from('agent_runs').select('id,created_at,prompt,status').eq('id', runId).eq('user_id', user.id).limit(1),
           sb.from('agent_events').select('*').eq('run_id', runId).order('id', { ascending: true }),
         ])
 
@@ -113,7 +134,7 @@ export default function RunDetailsPage() {
     }
 
     load()
-  }, [canRead, runId])
+  }, [canRead, runId, user])
 
   return (
     <div className="grid gap-6">

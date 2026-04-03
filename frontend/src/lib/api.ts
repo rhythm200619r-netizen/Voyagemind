@@ -1,11 +1,36 @@
+import { supabase } from '../supabase'
+
 const API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000'
 
-export async function createRun(prompt: string, orchestratorPersona?: string | null): Promise<{ run_id: string }> {
+async function getAuthToken() {
+  if (!supabase) return null
+  const { data } = await supabase.auth.getSession()
+  return data.session?.access_token ?? null
+}
+
+export async function createRun(prompt: string, budget?: number | string | null, orchestratorPersona?: string | null): Promise<{ run_id: string }> {
+  let finalPrompt = prompt.trim()
+  if (budget) {
+    const b = String(budget).trim()
+    const hasBudgetAlready = /\$\s*[0-9]/.test(finalPrompt) || /\bunder\b|\bwithin\b|\bbudget\b/i.test(finalPrompt)
+    if (!hasBudgetAlready) {
+      finalPrompt = `${finalPrompt} under $${b}`
+    }
+  }
+
+  const token = await getAuthToken()
+  if (!token) {
+    throw new Error('Please log in to create and save trips.')
+  }
+
   const resp = await fetch(`${API_URL}/runs`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
     body: JSON.stringify({
-      prompt,
+      prompt: finalPrompt,
       orchestrator_persona: orchestratorPersona ?? null,
     }),
   })

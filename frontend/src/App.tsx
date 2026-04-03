@@ -1,14 +1,18 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
+import ProtectedRoute from './components/ProtectedRoute'
+import PublicOnlyRoute from './components/PublicOnlyRoute'
 import Shell from './layout/Shell'
 import AboutPage from './pages/AboutPage'
 import FlightsPage from './pages/FlightsPage'
 import HolidaysPage from './pages/HolidaysPage'
 import HomePage from './pages/HomePage'
+import LoginPage from './pages/LoginPage'
 import MyTripsPage from './pages/MyTripsPage'
 import OffersPage from './pages/OffersPage'
 import RunDetailsPage from './pages/RunDetailsPage'
 import RunsPage from './pages/RunsPage'
+import SignupPage from './pages/SignupPage'
 import StaysPage from './pages/StaysPage'
 import SupportPage from './pages/SupportPage'
 import TripDetailsPage from './pages/TripDetailsPage'
@@ -23,12 +27,56 @@ export default function App() {
           <Route path="/stays" element={<StaysPage />} />
           <Route path="/holidays" element={<HolidaysPage />} />
           <Route path="/offers" element={<OffersPage />} />
-          <Route path="/my-trips" element={<MyTripsPage />} />
+          <Route
+            path="/my-trips"
+            element={
+              <ProtectedRoute>
+                <MyTripsPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/support" element={<SupportPage />} />
-          <Route path="/trips/:runId" element={<TripDetailsPage />} />
-          <Route path="/runs" element={<RunsPage />} />
-          <Route path="/runs/:runId" element={<RunDetailsPage />} />
+          <Route
+            path="/trips/:runId"
+            element={
+              <ProtectedRoute>
+                <TripDetailsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/runs"
+            element={
+              <ProtectedRoute>
+                <RunsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/runs/:runId"
+            element={
+              <ProtectedRoute>
+                <RunDetailsPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/about" element={<AboutPage />} />
+          <Route
+            path="/login"
+            element={
+              <PublicOnlyRoute>
+                <LoginPage />
+              </PublicOnlyRoute>
+            }
+          />
+          <Route
+            path="/signup"
+            element={
+              <PublicOnlyRoute>
+                <SignupPage />
+              </PublicOnlyRoute>
+            }
+          />
           <Route path="/plan" element={<Navigate to="/" replace />} />
           <Route
             path="*"

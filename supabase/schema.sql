@@ -16,6 +16,9 @@ create table if not exists public.agent_runs (
   metadata jsonb not null default '{}'::jsonb
 );
 
+create index if not exists agent_runs_user_id_created_at_idx
+  on public.agent_runs (user_id, created_at desc);
+
 -- Agent events: append-only log for realtime UI
 create table if not exists public.agent_events (
   id bigint generated always as identity primary key,
@@ -61,8 +64,57 @@ alter table public.agent_runs replica identity full;
 alter table public.agent_events replica identity full;
 
 -- Row Level Security (RLS)
--- Enable and author policies as needed for your auth model.
--- For MVP, you can start with RLS disabled, then lock down.
--- alter table public.agent_runs enable row level security;
--- alter table public.agent_events enable row level security;
--- alter table public.user_memories enable row level security;
+alter table public.agent_runs enable row level security;
+alter table public.agent_events enable row level security;
+alter table public.user_memories enable row level security;
+
+drop policy if exists agent_runs_select_own on public.agent_runs;
+create policy agent_runs_select_own
+  on public.agent_runs
+  for select
+  using (auth.uid() = user_id);
+
+drop policy if exists agent_runs_insert_own on public.agent_runs;
+create policy agent_runs_insert_own
+  on public.agent_runs
+  for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists agent_runs_update_own on public.agent_runs;
+create policy agent_runs_update_own
+  on public.agent_runs
+  for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists agent_events_select_own_runs on public.agent_events;
+create policy agent_events_select_own_runs
+  on public.agent_events
+  for select
+  using (
+    exists (
+      select 1
+      from public.agent_runs
+      where public.agent_runs.id = public.agent_events.run_id
+      and public.agent_runs.user_id = auth.uid()
+    )
+  );
+
+drop policy if exists user_memories_select_own on public.user_memories;
+create policy user_memories_select_own
+  on public.user_memories
+  for select
+  using (auth.uid() = user_id);
+
+drop policy if exists user_memories_insert_own on public.user_memories;
+create policy user_memories_insert_own
+  on public.user_memories
+  for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists user_memories_update_own on public.user_memories;
+create policy user_memories_update_own
+  on public.user_memories
+  for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);

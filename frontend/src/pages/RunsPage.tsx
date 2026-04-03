@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 
+import { useAuth } from '../auth/AuthContext'
 import { supabase, supabaseConfigError } from '../supabase'
 
 type AgentRunRow = {
@@ -11,6 +12,7 @@ type AgentRunRow = {
 }
 
 export default function RunsPage() {
+  const { user } = useAuth()
   const [runs, setRuns] = useState<AgentRunRow[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -27,6 +29,10 @@ export default function RunsPage() {
         setError(supabaseConfigError ?? 'Supabase client is not configured')
         return
       }
+      if (!user) {
+        setRuns([])
+        return
+      }
 
       const sb = supabase
       if (!sb) {
@@ -40,6 +46,7 @@ export default function RunsPage() {
         const { data, error: fetchErr } = await sb
           .from('agent_runs')
           .select('id,created_at,prompt,status')
+          .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .limit(25)
 
@@ -53,7 +60,7 @@ export default function RunsPage() {
     }
 
     load()
-  }, [canRead])
+  }, [canRead, user])
 
   return (
     <div className="grid gap-6">

@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
+import { useAuth } from '../auth/AuthContext'
 import { createRun } from '../lib/api'
 import { supabase, supabaseConfigError } from '../supabase'
 
 export default function HomePage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [isStarting, setIsStarting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -22,7 +24,87 @@ export default function HomePage() {
     return `${raw} under $${numericBudget}`
   }, [prompt, budget])
 
+  const quickStarts = [
+    {
+      title: 'Tokyo food sprint',
+      meta: '3 days · museums + street food',
+      prompt: 'Plan a 3-day trip to Tokyo focused on food and museums under $1200',
+      budget: '1200',
+    },
+    {
+      title: 'Paris culture break',
+      meta: '4 days · art + cafés',
+      prompt: 'Plan a 4-day trip to Paris focused on art and cafes under $1800',
+      budget: '1800',
+    },
+    {
+      title: 'Seoul night market run',
+      meta: '2 days · food + night views',
+      prompt: 'Plan a 2-day trip to Seoul for food under $600',
+      budget: '600',
+    },
+  ]
+
+  const featuredDestinations = [
+    {
+      title: 'Lisbon',
+      subtitle: 'Sunsets, seafood, tram rides',
+      src: 'https://images.unsplash.com/photo-1513735492246-483525079686?auto=format&fit=crop&w=1400&q=60',
+    },
+    {
+      title: 'Kyoto',
+      subtitle: 'Temples, gardens, quiet luxury',
+      src: 'https://images.unsplash.com/photo-1526481280695-3c46949ffc0d?auto=format&fit=crop&w=1400&q=60',
+    },
+    {
+      title: 'Istanbul',
+      subtitle: 'Markets, rooftops, ferries',
+      src: 'https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?auto=format&fit=crop&w=1400&q=60',
+    },
+  ]
+
+  const valueProps = [
+    {
+      title: 'Prompt to plan',
+      body: 'Describe the trip in plain language and get flights, stays, and a day-by-day plan in one run.',
+    },
+    {
+      title: 'Budget-aware',
+      body: 'The planner splits the budget and keeps suggestions within the target you give it.',
+    },
+    {
+      title: 'Live results',
+      body: 'You can watch the plan come together in real time instead of waiting for one final response.',
+    },
+  ]
+
+  const fallbackDestinationImage =
+    'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1400&q=60'
+
+  const editorialTrips = [
+    {
+      title: 'Tokyo after dark',
+      meta: '3 nights · food-led city break',
+      image: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=1400&q=60',
+    },
+    {
+      title: 'Paris with breathing room',
+      meta: '4 nights · art, cafés, walkable stays',
+      image: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=1400&q=60',
+    },
+    {
+      title: 'Seoul in motion',
+      meta: '2 nights · street food and nightlife',
+      image: 'https://images.unsplash.com/photo-1538485399081-7191377e8241?auto=format&fit=crop&w=1400&q=60',
+    },
+  ]
+
   async function handleRun(nextPrompt: string) {
+    if (!user) {
+      navigate('/login')
+      return
+    }
+
     if (supabaseConfigError || !supabase) {
       setError(supabaseConfigError ?? 'Supabase client is not configured')
       return
@@ -43,31 +125,78 @@ export default function HomePage() {
 
   return (
     <div className="grid gap-8">
-      <section className="relative overflow-hidden rounded-2xl bg-slate-900 text-white">
-        <img
-          src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=2000&q=60"
-          alt="Travel inspiration"
-          className="absolute inset-0 h-full w-full object-cover opacity-25"
-          loading="lazy"
-        />
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-950/75 via-slate-900/55 to-slate-900/60" />
+      <section className="overflow-hidden rounded-[30px] border border-[var(--fog-border)] bg-[linear-gradient(180deg,rgba(10,10,15,0.92),rgba(12,12,18,0.8))] text-[#f5eee5] shadow-[0_24px_70px_rgba(0,0,0,0.28)]">
+        <div className="grid gap-8 px-6 py-10 md:px-10 md:py-14 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+          <div className="grid gap-5">
+            <div className="grid gap-3">
+              <div className="display text-xs font-semibold tracking-[0.28em] text-[color:var(--amber)]">VOYAGEMIND</div>
+              <h1 className="display max-w-xl text-4xl font-semibold leading-tight md:text-5xl">Travel planning with the polish of a concierge desk.</h1>
+              <p className="max-w-2xl text-sm text-[#f5eee5]/74 md:text-base">
+                Start with a prompt, but experience the page like a curated travel magazine: destination ideas, quick starts,
+                and a premium trip launcher that handles flights, stays, and itinerary in one flow.
+              </p>
+            </div>
 
-        <div className="relative grid gap-6 px-6 py-10 md:px-10 md:py-14">
-          <div className="grid gap-3">
-            <div className="text-xs font-semibold tracking-wide text-white/70">VOYAGEMIND</div>
-            <h1 className="text-3xl font-semibold leading-tight md:text-4xl">Plan travel with an AI prompt</h1>
-            <p className="max-w-2xl text-sm text-white/80 md:text-base">
-              Describe your trip in plain English. You’ll get flight + hotel options that fit your budget, plus an
-              itinerary — streamed live via Supabase Realtime.
-            </p>
+            <div className="flex flex-wrap gap-2">
+              {['Editorial', 'Fast planning', 'Budget aware', 'Private to your account'].map((item) => (
+                <span key={item} className="rounded-full border border-[rgba(255,255,255,0.12)] bg-white/5 px-3 py-1 text-xs text-[#f5eee5]/80">
+                  {item}
+                </span>
+              ))}
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-3">
+              {[
+                { label: 'Journeys shaped', value: '120+' },
+                { label: 'Planning speed', value: '< 30s' },
+                { label: 'Updates', value: 'Live' },
+              ].map((stat) => (
+                <div key={stat.label} className="rounded-[18px] border border-[rgba(255,255,255,0.08)] bg-white/5 p-4 backdrop-blur-sm">
+                  <div className="display text-2xl font-semibold text-white">{stat.value}</div>
+                  <div className="mt-1 text-xs uppercase tracking-[0.22em] text-[#f5eee5]/60">{stat.label}</div>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="rounded-xl border border-white/10 bg-white/10 p-4 backdrop-blur transition hover:bg-white/[0.12]">
-            <div className="grid gap-3 rounded-lg bg-white p-4 shadow-sm ring-1 ring-white/10 dark:bg-slate-950">
+          <div className="grid gap-4">
+            <div className="grid gap-3 rounded-[24px] border border-[rgba(255,255,255,0.1)] bg-white/5 p-4 backdrop-blur-sm">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="display text-xs uppercase tracking-[0.22em] text-[color:var(--amber)]">Featured routes</div>
+                  <h2 className="display mt-1 text-2xl text-white">Start from a mood, not a blank box</h2>
+                </div>
+                <span className="rounded-full border border-[rgba(212,136,58,0.18)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--amber)]">
+                  Private
+                </span>
+              </div>
+
+              <div className="grid gap-3">
+                {editorialTrips.map((trip) => (
+                  <button
+                    key={trip.title}
+                    type="button"
+                    onClick={() => {
+                      setPrompt(`Plan a ${trip.meta.toLowerCase().replace(' · ', ' trip focused on ')} under $1200`)
+                    }}
+                    className="group grid grid-cols-[92px_1fr] gap-3 rounded-[18px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] p-2 text-left transition hover:border-[rgba(212,136,58,0.24)] hover:bg-[rgba(255,255,255,0.06)]"
+                  >
+                    <img src={trip.image} alt={trip.title} className="h-[92px] w-[92px] rounded-[14px] object-cover" loading="lazy" />
+                    <div className="flex min-w-0 flex-col justify-center pr-2">
+                      <div className="display truncate text-base text-white">{trip.title}</div>
+                      <div className="mt-1 text-xs text-[#f5eee5]/68">{trip.meta}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid gap-3 rounded-[24px] border border-[rgba(255,255,255,0.08)] bg-white/5 p-4 backdrop-blur-sm">
+              <div className="display text-sm uppercase tracking-[0.22em] text-[color:var(--amber)]">Quick launch</div>
               <label className="grid gap-1">
-                <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Your travel prompt</span>
+                <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[#f5eee5]/60">Your travel prompt</span>
                 <textarea
-                  className="min-h-[120px] resize-y rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:ring-2 focus:ring-slate-200 hover:border-slate-300 dark:border-white/10 dark:bg-slate-900/60 dark:text-slate-100 dark:placeholder:text-slate-500 dark:hover:border-white/20 dark:focus:ring-white/10"
+                  className="vm-field min-h-[108px] resize-y px-4 py-3 text-sm placeholder:text-[color:var(--body-muted)]"
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                   placeholder="e.g. Plan a 4-day trip to Paris focused on art and cafes"
@@ -76,93 +205,113 @@ export default function HomePage() {
 
               <div className="grid gap-3 md:grid-cols-[1fr_auto]">
                 <label className="grid gap-1">
-                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Total budget (USD)</span>
+                  <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[#f5eee5]/60">Total budget (USD)</span>
                   <input
-                    className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:ring-2 focus:ring-slate-200 hover:border-slate-300 dark:border-white/10 dark:bg-slate-900/60 dark:text-slate-100 dark:placeholder:text-slate-500 dark:hover:border-white/20 dark:focus:ring-white/10"
+                    className="vm-field px-4 py-3 text-sm placeholder:text-[color:var(--body-muted)]"
                     value={budget}
                     onChange={(e) => setBudget(e.target.value)}
                     placeholder="1200"
                     inputMode="numeric"
                   />
-                  <div className="text-xs text-slate-500 dark:text-slate-400">Default split: 50% flights, 50% hotels.</div>
+                  <div className="text-xs text-[#f5eee5]/55">Flights, stays, and itinerary planned together.</div>
                 </label>
 
                 <button
                   type="button"
-                  className="mt-5 rounded-md bg-blue-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-blue-500 active:bg-blue-700 disabled:opacity-60 disabled:hover:bg-blue-600"
+                  className="vm-primary-button mt-5 px-5 py-3 text-sm font-semibold text-[#140d07] disabled:opacity-60"
                   onClick={() => handleRun(composedPrompt)}
                   disabled={Boolean(isStarting) || composedPrompt.trim().length === 0}
                 >
-                  {isStarting ? 'Starting…' : 'Run'}
+                  {isStarting ? 'Starting…' : 'Plan trip'}
                 </button>
               </div>
 
-              <div className="text-xs text-slate-500 dark:text-slate-400">Tip: include interests (food, museums) and dates if you want.</div>
+              <div className="flex flex-wrap gap-2 text-xs text-[#f5eee5]/70">
+                {['Food trip', 'City break', 'Luxury weekend', 'Beach escape'].map((chip) => (
+                  <button
+                    key={chip}
+                    type="button"
+                    className="rounded-full border border-[rgba(255,255,255,0.1)] px-3 py-1 transition hover:border-[rgba(212,136,58,0.28)] hover:text-[color:var(--amber)]"
+                    onClick={() => setPrompt(`Plan a 3-day trip to ${chip.toLowerCase()} under $1200`)}
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
+
+              {error ? <div className="rounded-[16px] border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-100">{error}</div> : null}
             </div>
           </div>
-
-          {error ? <div className="text-sm text-red-200">{error}</div> : null}
         </div>
       </section>
 
       <section className="grid gap-3">
         <div className="flex flex-wrap items-end justify-between gap-2">
-          <h2 className="text-lg font-semibold">Get inspired</h2>
-          <div className="text-xs text-slate-600">Real photos (Unsplash)</div>
+          <div>
+            <h2 className="display text-2xl font-semibold text-[color:var(--page-text)]">Quick starts</h2>
+            <p className="text-sm text-[color:var(--body-muted)]">Use these as polished starting points rather than generic examples.</p>
+          </div>
+          <div className="text-xs text-[color:var(--body-muted)]">Real photos for destination moodboarding</div>
         </div>
         <div className="grid gap-3 md:grid-cols-3">
-          {[
-            {
-              title: 'Tokyo',
-              subtitle: 'Night markets • Museums • Street food',
-              src: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=1400&q=60',
-            },
-            {
-              title: 'Paris',
-              subtitle: 'Cafés • Art • Walkable neighborhoods',
-              src: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=1400&q=60',
-            },
-            {
-              title: 'Seoul',
-              subtitle: 'Street food • Night views • Culture',
-              src: 'https://images.unsplash.com/photo-1538485399081-7191377e8241?auto=format&fit=crop&w=1400&q=60',
-            },
-          ].map((img) => (
-            <div key={img.title} className="group overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm dark:border-white/10 dark:bg-slate-950 dark:hover:border-white/20">
-              <img src={img.src} alt={img.title} className="h-40 w-full object-cover" loading="lazy" />
-              <div className="p-4">
-                <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">{img.title}</div>
-                <div className="mt-1 text-xs text-slate-600 dark:text-slate-400">{img.subtitle}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="grid gap-3">
-        <h2 className="text-lg font-semibold">Popular starts</h2>
-        <div className="grid gap-3 md:grid-cols-3">
-          {[
-            { title: 'Tokyo', prompt: 'Plan a 3-day trip to Tokyo for food and museums under $1200' },
-            { title: 'Paris', prompt: 'Plan a 4-day trip to Paris focused on art and cafes under $1800' },
-            { title: 'Seoul', prompt: 'Plan a 2-day trip to Seoul for food under $600' },
-          ].map((card) => (
+          {quickStarts.map((card) => (
             <button
               key={card.title}
               type="button"
               onClick={() => {
                 setPrompt(card.prompt)
-                const match = card.prompt.match(/\$\s*([0-9][0-9,]*)/)
-                if (match) setBudget(match[1].replace(/,/g, ''))
+                setBudget(card.budget)
               }}
-              className="rounded-lg border border-slate-200 bg-white p-4 text-left transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm dark:border-white/10 dark:bg-slate-950 dark:hover:border-white/20 dark:hover:bg-slate-900/40"
+              className="overflow-hidden rounded-[22px] border border-[var(--surface-border)] bg-[var(--surface-strong)] text-left transition hover:-translate-y-0.5 hover:border-[rgba(212,136,58,0.28)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.12)]"
               disabled={isStarting}
             >
-              <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">{card.title}</div>
-              <div className="mt-1 text-xs text-slate-600 dark:text-slate-400">{card.prompt}</div>
+              <div className="p-4">
+                <div className="display text-base font-semibold text-[color:var(--page-text)]">{card.title}</div>
+                <div className="mt-1 text-xs uppercase tracking-[0.2em] text-[color:var(--amber)]">{card.meta}</div>
+                <div className="mt-3 text-sm text-[color:var(--body-muted)]">Use this as a seed prompt and refine it after the first result.</div>
+              </div>
             </button>
           ))}
         </div>
+      </section>
+
+      <section className="grid gap-3">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 className="display text-2xl font-semibold text-[color:var(--page-text)]">Featured destinations</h2>
+            <p className="text-sm text-[color:var(--body-muted)]">Keep these as mood cards, or turn them into one-click prompt starters.</p>
+          </div>
+        </div>
+        <div className="grid gap-3 md:grid-cols-3">
+          {featuredDestinations.map((img) => (
+            <article key={img.title} className="group overflow-hidden rounded-[22px] border border-[var(--surface-border)] bg-[var(--surface-strong)] transition hover:-translate-y-0.5 hover:border-[rgba(212,136,58,0.28)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.12)]">
+              <img
+                src={img.src}
+                alt={img.title}
+                className="h-44 w-full object-cover"
+                loading="lazy"
+                onError={(event) => {
+                  const target = event.currentTarget
+                  target.onerror = null
+                  target.src = fallbackDestinationImage
+                }}
+              />
+              <div className="p-4">
+                <div className="display text-base font-semibold text-[color:var(--page-text)]">{img.title}</div>
+                <div className="mt-1 text-xs text-[color:var(--body-muted)]">{img.subtitle}</div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="grid gap-3 md:grid-cols-3">
+        {valueProps.map((item) => (
+          <article key={item.title} className="theme-surface grid gap-2 rounded-[22px] border p-4 shadow-[0_16px_50px_rgba(0,0,0,0.08)]">
+            <div className="display text-lg text-[color:var(--page-text)]">{item.title}</div>
+            <p className="text-sm leading-relaxed text-[color:var(--body-muted)]">{item.body}</p>
+          </article>
+        ))}
       </section>
     </div>
   )
