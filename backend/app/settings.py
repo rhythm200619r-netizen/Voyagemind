@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
+    def cors_origin_regex(self) -> str:
+        # Allow local dev frontends on any port so fetches do not break when Vite chooses a different port.
+        return r"https?://(localhost|127\.0\.0\.1)(:\d+)?"
+
     def supabase_is_configured(self) -> bool:
         return bool(self.supabase_url and self.supabase_service_role_key)
 

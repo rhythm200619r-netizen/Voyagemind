@@ -361,6 +361,132 @@ def _generate_embedding(text: str) -> list[float] | None:
     return None
 
 
+def _safe_float(value: Any) -> float | None:
+    try:
+        if value is None:
+            return None
+        return float(value)
+    except Exception:
+        return None
+
+
+def _safe_int(value: Any, default: int = 0) -> int:
+    try:
+        if value is None:
+            return default
+        return int(value)
+    except Exception:
+        return default
+
+
+def _split_route(route: str | None, fallback_destination: str | None) -> tuple[str | None, str | None]:
+    if not route:
+        return None, fallback_destination
+    if "→" in route:
+        left, right = [part.strip() for part in route.split("→", 1)]
+        return left or None, right or fallback_destination
+    if "->" in route:
+        left, right = [part.strip() for part in route.split("->", 1)]
+        return left or None, right or fallback_destination
+    return None, fallback_destination
+
+
+def _persist_flight_offers(
+    *,
+    supabase: Client,
+    run_id: str,
+    user_id: str | None,
+    destination: str | None,
+    flight_options: list[dict[str, Any]],
+) -> None:
+    if not user_id or not flight_options:
+        return
+
+    rows: list[dict[str, Any]] = []
+    for index, option in enumerate(flight_options, start=1):
+        route = option.get("route")
+        origin, destination_value = _split_route(route if isinstance(route, str) else None, destination)
+        depart_date = option.get("depart_date")
+        return_date = option.get("return_date")
+        provider_offer_id = option.get("id") or f"mock-flight-{index:02d}"
+
+        rows.append(
+            {
+                "run_id": run_id,
+                "user_id": user_id,
+                "provider": "mock",
+                "provider_offer_id": str(provider_offer_id),
+                "rank": index,
+                "origin": origin,
+                "destination": destination_value,
+                "route": route,
+                "depart_date": depart_date if isinstance(depart_date, str) else None,
+                "return_date": return_date if isinstance(return_date, str) else None,
+                "depart_time": option.get("depart_time") if isinstance(option.get("depart_time"), str) else None,
+                "arrive_time": option.get("arrive_time") if isinstance(option.get("arrive_time"), str) else None,
+                "carrier": option.get("carrier") if isinstance(option.get("carrier"), str) else None,
+                "stops": _safe_int(option.get("stops"), default=0),
+                "price_usd": _safe_float(option.get("price_usd")),
+                "currency": "USD",
+                "deep_link": None,
+                "raw_payload": option,
+            }
+        )
+
+    try:
+        supabase.table("flight_offers").insert(rows).execute()
+    except Exception:
+        pass
+
+
+def _persist_hotel_offers(
+    *,
+    supabase: Client,
+    run_id: str,
+    user_id: str | None,
+    destination: str | None,
+    hotel_options: list[dict[str, Any]],
+) -> None:
+    if not user_id or not hotel_options:
+        return
+
+    rows: list[dict[str, Any]] = []
+    for index, option in enumerate(hotel_options, start=1):
+        provider_property_id = option.get("id") if isinstance(option.get("id"), str) else None
+        provider_offer_id = provider_property_id or f"mock-hotel-{index:02d}"
+        check_in = option.get("check_in")
+        check_out = option.get("check_out")
+
+        rows.append(
+            {
+                "run_id": run_id,
+                "user_id": user_id,
+                "provider": "mock",
+                "provider_property_id": provider_property_id,
+                "provider_offer_id": str(provider_offer_id),
+                "rank": index,
+                "hotel_name": option.get("name") or f"Hotel {index}",
+                "city": destination,
+                "area": option.get("area"),
+                "check_in": check_in if isinstance(check_in, str) else None,
+                "check_out": check_out if isinstance(check_out, str) else None,
+                "nights": _safe_int(option.get("nights"), default=0),
+                "nightly_usd": _safe_float(option.get("nightly_usd")),
+                "total_usd": _safe_float(option.get("total_usd")),
+                "rating": _safe_float(option.get("rating")),
+                "currency": "USD",
+                "perks": option.get("perks") or [],
+                "deep_link": None,
+                "raw_payload": option,
+            }
+        )
+
+    try:
+        supabase.table("hotel_offers").insert(rows).execute()
+    except Exception:
+        pass
+
+
 def run_orchestration(*, supabase: Client, run_id: str, prompt: str, user_id: str | None = None) -> None:
     """Toy multi-agent runner.
 
@@ -533,6 +659,21 @@ def run_orchestration(*, supabase: Client, run_id: str, prompt: str, user_id: st
             "hotel_options": hotel_options,
             "itinerary": itinerary,
         },
+    )
+
+    _persist_flight_offers(
+        supabase=supabase,
+        run_id=run_id,
+        user_id=user_id,
+        destination=destination,
+        flight_options=flight_options,
+    )
+    _persist_hotel_offers(
+        supabase=supabase,
+        run_id=run_id,
+        user_id=user_id,
+        destination=destination,
+        hotel_options=hotel_options,
     )
 
     # Extract and store travel preferences

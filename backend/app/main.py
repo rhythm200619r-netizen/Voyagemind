@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any, Literal
 
 from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Query
@@ -15,6 +16,7 @@ app = FastAPI(title="VoyageMind API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list(),
+    allow_origin_regex=settings.cors_origin_regex(),
     allow_credentials=True,
     allow_methods=["*"] ,
     allow_headers=["*"],
@@ -127,6 +129,66 @@ class MockIngestRequest(BaseModel):
 
 class MockIngestResponse(BaseModel):
     run_id: str
+
+
+class FlightOfferRow(BaseModel):
+    id: str
+    created_at: str
+    provider: str
+    provider_offer_id: str
+    rank: int
+    destination: str | None = None
+    route: str | None = None
+    depart_date: str | None = None
+    return_date: str | None = None
+    depart_time: str | None = None
+    arrive_time: str | None = None
+    carrier: str | None = None
+    stops: int | None = None
+    price_usd: float | None = None
+    currency: str | None = None
+    raw_payload: dict[str, Any]
+
+
+class HotelOfferRow(BaseModel):
+    id: str
+    created_at: str
+    provider: str
+    provider_offer_id: str
+    rank: int
+    hotel_name: str | None = None
+    city: str | None = None
+    area: str | None = None
+    check_in: str | None = None
+    check_out: str | None = None
+    nights: int | None = None
+    nightly_usd: float | None = None
+    total_usd: float | None = None
+    rating: float | None = None
+    currency: str | None = None
+    raw_payload: dict[str, Any]
+
+
+class RunOffersResponse(BaseModel):
+    flight_offers: list[FlightOfferRow]
+    hotel_offers: list[HotelOfferRow]
+    booked: bool = False
+    booked_at: str | None = None
+    selected_flight_offer_id: str | None = None
+    selected_hotel_offer_id: str | None = None
+
+
+class BookRunRequest(BaseModel):
+    flight_offer_id: str = Field(..., min_length=1)
+    hotel_offer_id: str = Field(..., min_length=1)
+
+
+class BookRunResponse(BaseModel):
+    run_id: str
+    booked: bool
+    booked_at: str | None = None
+    flight_offer_id: str
+    hotel_offer_id: str
 
 
 def _get_user_id_from_auth_header(authorization: str | None) -> str:
@@ -272,6 +334,189 @@ def get_run(run_id: str, authorization: str | None = Header(default=None)) -> di
     if not res.data:
         raise HTTPException(status_code=404, detail="Run not found")
     return res.data
+
+
+@app.get("/runs/{run_id}/offers", response_model=RunOffersResponse)
+def get_run_offers(run_id: str, authorization: str | None = Header(default=None)) -> RunOffersResponse:
+    user_id = _get_user_id_from_auth_header(authorization)
+
+    try:
+        supabase = get_supabase_admin_client()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    try:
+        run_check = (
+            supabase.table("agent_runs")
+            .select("id,booked,booked_at,selected_flight_offer_id,selected_hotel_offer_id")
+            .eq("id", run_id)
+            .eq("user_id", user_id)
+            .maybe_single()
+            .execute()
+        )
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=f"Failed to fetch run: {exc}") from exc
+
+    if not run_check.data:
+        raise HTTPException(status_code=404, detail="Run not found")
+
+    run_row = run_check.data
+
+    try:
+        flight_rows = (
+            supabase.table("flight_offers")
+            .select(
+                "id,created_at,provider,provider_offer_id,rank,destination,route,depart_date,return_date,depart_time,arrive_time,carrier,stops,price_usd,currency,raw_payload"
+            )
+            .eq("run_id", run_id)
+            .eq("user_id", user_id)
+            .order("rank", desc=False)
+            .execute()
+        )
+        next_flight_rows = flight_rows.data or []
+    except Exception as exc:  # noqa: BLE001
+        print(f"Error fetching flight offers: {exc}")
+        next_flight_rows = []
+
+    try:
+        hotel_rows = (
+            supabase.table("hotel_offers")
+            .select(
+                "id,created_at,provider,provider_offer_id,rank,hotel_name,city,area,check_in,check_out,nights,nightly_usd,total_usd,rating,currency,raw_payload"
+            )
+            .eq("run_id", run_id)
+            .eq("user_id", user_id)
+            .order("rank", desc=False)
+            .execute()
+        )
+        next_hotel_rows = hotel_rows.data or []
+    except Exception as exc:  # noqa: BLE001
+        print(f"Error fetching hotel offers: {exc}")
+        next_hotel_rows = []
+
+    try:
+        flight_offers = []
+        for row in next_flight_rows:
+            try:
+                # Convert numeric types to ensure Pydantic compatibility
+                row = dict(row)
+                if row.get("stops") is not None:
+                    row["stops"] = int(row["stops"])
+                if row.get("price_usd") is not None:
+                    row["price_usd"] = float(row["price_usd"])
+                flight_offers.append(FlightOfferRow(**row))
+            except Exception as exc:  # noqa: BLE001
+                print(f"Error parsing flight offer row: {row} - {exc}")
+                raise
+
+        hotel_offers = []
+        for row in next_hotel_rows:
+            try:
+                # Convert numeric types to ensure Pydantic compatibility
+                row = dict(row)
+                if row.get("nights") is not None:
+                    row["nights"] = int(row["nights"])
+                if row.get("nightly_usd") is not None:
+                    row["nightly_usd"] = float(row["nightly_usd"])
+                if row.get("total_usd") is not None:
+                    row["total_usd"] = float(row["total_usd"])
+                if row.get("rating") is not None:
+                    row["rating"] = float(row["rating"])
+                hotel_offers.append(HotelOfferRow(**row))
+            except Exception as exc:  # noqa: BLE001
+                print(f"Error parsing hotel offer row: {row} - {exc}")
+                raise
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=f"Failed to parse offers: {exc}") from exc
+
+    return RunOffersResponse(
+        flight_offers=flight_offers,
+        hotel_offers=hotel_offers,
+        booked=bool(run_row.get("booked", False)),
+        booked_at=run_row.get("booked_at"),
+        selected_flight_offer_id=run_row.get("selected_flight_offer_id"),
+        selected_hotel_offer_id=run_row.get("selected_hotel_offer_id"),
+    )
+
+
+@app.post("/runs/{run_id}/book", response_model=BookRunResponse)
+def book_run(
+    run_id: str,
+    req: BookRunRequest,
+    authorization: str | None = Header(default=None),
+) -> BookRunResponse:
+    user_id = _get_user_id_from_auth_header(authorization)
+
+    try:
+        supabase = get_supabase_admin_client()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    run_res = (
+        supabase.table("agent_runs")
+        .select("id,booked,booked_at")
+        .eq("id", run_id)
+        .eq("user_id", user_id)
+        .maybe_single()
+        .execute()
+    )
+    if not run_res.data:
+        raise HTTPException(status_code=404, detail="Run not found")
+
+    run_row = run_res.data
+    if run_row.get("booked"):
+        raise HTTPException(status_code=409, detail="This trip is already booked")
+
+    flight_res = (
+        supabase.table("flight_offers")
+        .select("id,run_id,user_id")
+        .eq("id", req.flight_offer_id)
+        .eq("run_id", run_id)
+        .eq("user_id", user_id)
+        .maybe_single()
+        .execute()
+    )
+    if not flight_res.data:
+        raise HTTPException(status_code=400, detail="Selected flight offer does not belong to this trip")
+
+    hotel_res = (
+        supabase.table("hotel_offers")
+        .select("id,run_id,user_id")
+        .eq("id", req.hotel_offer_id)
+        .eq("run_id", run_id)
+        .eq("user_id", user_id)
+        .maybe_single()
+        .execute()
+    )
+    if not hotel_res.data:
+        raise HTTPException(status_code=400, detail="Selected hotel offer does not belong to this trip")
+
+    booked_at = datetime.now(timezone.utc).isoformat()
+    update_res = (
+        supabase.table("agent_runs")
+        .update(
+            {
+                "booked": True,
+                "booked_at": booked_at,
+                "selected_flight_offer_id": req.flight_offer_id,
+                "selected_hotel_offer_id": req.hotel_offer_id,
+            }
+        )
+        .eq("id", run_id)
+        .eq("user_id", user_id)
+        .eq("booked", False)
+        .execute()
+    )
+    if not update_res.data:
+        raise HTTPException(status_code=409, detail="This trip was booked by another request")
+
+    return BookRunResponse(
+        run_id=run_id,
+        booked=True,
+        booked_at=booked_at,
+        flight_offer_id=req.flight_offer_id,
+        hotel_offer_id=req.hotel_offer_id,
+    )
 
 
 @app.get("/runs")

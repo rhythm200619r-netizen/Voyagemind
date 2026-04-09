@@ -104,6 +104,7 @@ export default function MyTripsPage() {
           .from('agent_runs')
           .select('id,created_at,prompt,status')
           .eq('user_id', user.id)
+          .eq('booked', true)
           .order('created_at', { ascending: false })
           .limit(20)
 
@@ -123,7 +124,7 @@ export default function MyTripsPage() {
     <div className="grid gap-6">
       <section className="grid gap-2">
         <h1 className="display text-3xl font-semibold text-[color:var(--page-text)]">My Trips</h1>
-        <p className="max-w-2xl text-sm text-[color:var(--body-muted)]">Your recent AI trip plans, rendered as a compact travel ledger.</p>
+        <p className="max-w-2xl text-sm text-[color:var(--body-muted)]">Confirmed bookings only. Generated runs stay in Trip details until you lock a flight and hotel.</p>
       </section>
 
       {error ? <div className="rounded-[18px] border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-100">{error}</div> : null}
@@ -134,7 +135,7 @@ export default function MyTripsPage() {
         {isLoading ? (
           <div className="text-sm text-[color:var(--body-muted)]">Loading…</div>
         ) : sorted.length === 0 ? (
-          <div className="text-sm text-[color:var(--body-muted)]">No trips yet.</div>
+          <div className="text-sm text-[color:var(--body-muted)]">No booked trips yet.</div>
         ) : (
           sorted.map((run) => (
             <motion.div key={run.id} variants={itemVariants}>
