@@ -1,21 +1,27 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom'
 
 import ProtectedRoute from './components/ProtectedRoute'
 import PublicOnlyRoute from './components/PublicOnlyRoute'
 import Shell from './layout/Shell'
 import AboutPage from './pages/AboutPage'
 import FlightsPage from './pages/FlightsPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import HolidaysPage from './pages/HolidaysPage'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import MyTripsPage from './pages/MyTripsPage'
 import OffersPage from './pages/OffersPage'
-import RunDetailsPage from './pages/RunDetailsPage'
-import RunsPage from './pages/RunsPage'
+import PersonalInfoPage from './pages/PersonalInfoPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
 import SignupPage from './pages/SignupPage'
 import StaysPage from './pages/StaysPage'
 import SupportPage from './pages/SupportPage'
 import TripDetailsPage from './pages/TripDetailsPage'
+
+function LegacyRunRedirect() {
+  const { runId } = useParams<{ runId: string }>()
+  return <Navigate to={runId ? `/trips/${runId}` : '/my-trips'} replace />
+}
 
 export default function App() {
   return (
@@ -45,18 +51,18 @@ export default function App() {
             }
           />
           <Route
-            path="/runs"
+            path="/runs/:runId"
             element={
               <ProtectedRoute>
-                <RunsPage />
+                <LegacyRunRedirect />
               </ProtectedRoute>
             }
           />
           <Route
-            path="/runs/:runId"
+            path="/personal-info"
             element={
               <ProtectedRoute>
-                <RunDetailsPage />
+                <PersonalInfoPage />
               </ProtectedRoute>
             }
           />
@@ -77,6 +83,15 @@ export default function App() {
               </PublicOnlyRoute>
             }
           />
+          <Route
+            path="/forgot-password"
+            element={
+              <PublicOnlyRoute>
+                <ForgotPasswordPage />
+              </PublicOnlyRoute>
+            }
+          />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/plan" element={<Navigate to="/" replace />} />
           <Route
             path="*"

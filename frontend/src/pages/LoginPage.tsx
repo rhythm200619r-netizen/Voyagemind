@@ -81,6 +81,12 @@ export default function LoginPage() {
           />
         </label>
 
+        <div className="-mt-1 text-right text-sm">
+          <Link className="text-[color:var(--amber)] underline decoration-[rgba(212,136,58,0.3)] underline-offset-4" to="/forgot-password">
+            Forgot password?
+          </Link>
+        </div>
+
         {error ? <div className="rounded-[14px] border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-100">{error}</div> : null}
 
         <button type="submit" className="vm-primary-button py-3 text-sm font-semibold" disabled={isSubmitting}>

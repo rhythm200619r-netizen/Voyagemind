@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import hashlib
+import json
+import os
 import re
 import time
 from typing import Any
 
+import requests
 from supabase import Client
 
 
@@ -251,7 +255,113 @@ def _build_hotel_options(*, destination: str | None, dates: dict[str, str], hote
     return options
 
 
-def run_orchestration(*, supabase: Client, run_id: str, prompt: str) -> None:
+def _extract_preferences_with_llm(
+    result_payload: dict[str, Any],
+) -> dict[str, str]:
+    """Extract travel preferences from trip result using Groq LLM.
+
+    Returns structured preferences as a dict with keys like:
+    - accommodation_type, flight_preference, food_style, pace, budget_tier
+    - interests (comma-separated)
+    """
+
+    groq_api_key = os.environ.get("GROQ_API_KEY")
+    if not groq_api_key:
+        # Fallback: return empty preferences
+        return {}
+
+    destination = result_payload.get("destination", "")
+    budget = result_payload.get("budget_usd", 0)
+    days = result_payload.get("days", 0)
+    interests = result_payload.get("interests", [])
+    flight_options = result_payload.get("flight_options", [])
+    hotel_options = result_payload.get("hotel_options", [])
+
+    prompt = f"""Extract and infer travel preferences from the following trip summary.
+Return ONLY a valid JSON object with these fields (use null for missing values):
+- accommodation_type: one of [luxury, boutique, mid-range, budget, hostel]
+- flight_preference: one of [morning, afternoon, evening, flexible]
+- food_style: one of [high-end, local-street, casual, mixed]
+- pace: one of [slow, moderate, fast]
+- budget_tier: one of [ultra-budget, budget, mid-range, premium, luxury]
+- interests: comma-separated list of top 3 interests
+
+Trip Summary:
+- Destination: {destination}
+- Days: {days}
+- Budget: ${budget}
+- Stated Interests: {", ".join(interests) if interests else "not specified"}
+- Flight Options Available: {len(flight_options)} (prices: {", ".join([f"${opt.get('price_usd', 0)}" for opt in flight_options[:3]])})
+- Hotel Options Available: {len(hotel_options)} (price ranges: {", ".join([f"${opt.get('nightly_usd', 0)}/night" for opt in hotel_options[:3]])})
+
+Return only valid JSON, no explanation."""
+
+    try:
+        response = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {groq_api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": "llama-3.1-8b-instant",
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.3,
+                "max_tokens": 500,
+            },
+            timeout=10,
+        )
+        response.raise_for_status()
+        data = response.json()
+        content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+
+        # Parse JSON from response
+        prefs = json.loads(content)
+        return {
+            "accommodation_type": prefs.get("accommodation_type") or "",
+            "flight_preference": prefs.get("flight_preference") or "",
+            "food_style": prefs.get("food_style") or "",
+            "pace": prefs.get("pace") or "",
+            "budget_tier": prefs.get("budget_tier") or "",
+            "interests": prefs.get("interests") or "",
+        }
+    except Exception:
+        # Silently fail on LLM errors; preferences are optional
+        return {}
+
+
+def _generate_embedding(text: str) -> list[float] | None:
+    """Generate embedding using Hugging Face Inference API.
+
+    Returns 384-dimensional embedding for sentence-transformers/all-MiniLM-L6-v2.
+    Returns None on failure.
+    """
+
+    hf_token = os.environ.get("HF_TOKEN")
+    if not hf_token:
+        return None
+
+    try:
+        response = requests.post(
+            "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2",
+            headers={"Authorization": f"Bearer {hf_token}"},
+            json={"inputs": text},
+            timeout=10,
+        )
+        response.raise_for_status()
+        embedding = response.json()
+        if isinstance(embedding, list) and len(embedding) > 0:
+            # If response is list of lists, take first element
+            if isinstance(embedding[0], list):
+                return embedding[0]
+            return embedding
+    except Exception:
+        pass
+
+    return None
+
+
+def run_orchestration(*, supabase: Client, run_id: str, prompt: str, user_id: str | None = None) -> None:
     """Toy multi-agent runner.
 
     Writes events into `public.agent_events` for the realtime dashboard.
@@ -271,6 +381,15 @@ def run_orchestration(*, supabase: Client, run_id: str, prompt: str) -> None:
 
     def set_run_status(status: str) -> None:
         supabase.table("agent_runs").update({"status": status}).eq("id", run_id).execute()
+
+    # If user_id not provided, fetch from run
+    if not user_id:
+        try:
+            run_data = supabase.table("agent_runs").select("user_id").eq("id", run_id).maybe_single().execute()
+            if run_data.data:
+                user_id = run_data.data.get("user_id")
+        except Exception:
+            pass
 
     set_run_status("running")
     emit("Orchestrator", "run_started", f"Received prompt: {prompt}")
@@ -415,6 +534,60 @@ def run_orchestration(*, supabase: Client, run_id: str, prompt: str) -> None:
             "itinerary": itinerary,
         },
     )
+
+    # Extract and store travel preferences
+    if user_id:
+        result_payload = {
+            "destination": destination,
+            "days": days,
+            "budget_usd": budget,
+            "budget_split": budget_split,
+            "interests": interests,
+            "flight_options": flight_options,
+            "hotel_options": hotel_options,
+            "itinerary": itinerary,
+        }
+
+        prefs = _extract_preferences_with_llm(result_payload)
+
+        # Upsert each preference into user_preferences table
+        for pref_key, pref_value in prefs.items():
+            if pref_value:
+                try:
+                    supabase.table("user_preferences").upsert(
+                        {
+                            "user_id": user_id,
+                            "preference_key": pref_key,
+                            "preference_value": pref_value,
+                            "run_id": run_id,
+                            "updated_at": time.time(),
+                        },
+                        on_conflict="user_id,preference_key",
+                    ).execute()
+                except Exception:
+                    pass
+
+        # Generate combined embedding of all preferences for vector search
+        preferences_text = "\n".join([f"{k}: {v}" for k, v in prefs.items() if v])
+        if preferences_text:
+            embedding = _generate_embedding(preferences_text)
+            if embedding:
+                try:
+                    supabase.table("user_memories").insert(
+                        {
+                            "user_id": user_id,
+                            "content": f"Travel DNA from trip: {destination}",
+                            "embedding": embedding,
+                            "metadata": {
+                                "run_id": run_id,
+                                "source": "travel_dna",
+                                "kind": "preferences",
+                                **prefs,
+                            },
+                        }
+                    ).execute()
+                except Exception:
+                    pass
 
     set_run_status("completed")
     emit("Orchestrator", "run_completed", "Run completed")

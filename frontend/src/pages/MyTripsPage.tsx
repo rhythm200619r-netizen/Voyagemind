@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 
 import { useAuth } from '../auth/AuthContext'
 import Tooltip from '../components/Tooltip'
+import TravelDNACard from '../components/TravelDNACard'
 import { TripCard3D } from '../components/3d/TripCard3D'
 import { supabase, supabaseConfigError } from '../supabase'
 
@@ -126,6 +127,8 @@ export default function MyTripsPage() {
       </section>
 
       {error ? <div className="rounded-[18px] border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-100">{error}</div> : null}
+
+      <TravelDNACard />
 
       <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid gap-3">
         {isLoading ? (

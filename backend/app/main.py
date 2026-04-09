@@ -32,6 +32,15 @@ class CreateRunResponse(BaseModel):
     run_id: str
 
 
+class RegisterRequest(BaseModel):
+    email: str = Field(..., min_length=3)
+    password: str = Field(..., min_length=6)
+
+
+class RegisterResponse(BaseModel):
+    user_id: str
+
+
 class FlightSegment(BaseModel):
     origin: str
     destination: str
@@ -154,6 +163,44 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.post("/auth/register", response_model=RegisterResponse)
+def register_user(req: RegisterRequest) -> RegisterResponse:
+    """Create a confirmed email/password user without sending auth emails.
+
+    This is intended for local/dev flows where email quotas are constrained.
+    """
+
+    try:
+        supabase = get_supabase_admin_client()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    email = req.email.strip().lower()
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required")
+
+    try:
+        created = supabase.auth.admin.create_user(
+            {
+                "email": email,
+                "password": req.password,
+                "email_confirm": True,
+            }
+        )
+    except Exception as exc:  # noqa: BLE001
+        msg = str(exc)
+        if "already" in msg.lower() and "register" in msg.lower():
+            raise HTTPException(status_code=409, detail="An account with this email already exists") from exc
+        raise HTTPException(status_code=400, detail=msg) from exc
+
+    user = getattr(created, "user", None)
+    user_id = getattr(user, "id", None)
+    if not user_id:
+        raise HTTPException(status_code=500, detail="User created but no user id was returned")
+
+    return RegisterResponse(user_id=str(user_id))
+
+
 @app.post("/runs", response_model=CreateRunResponse)
 def create_run(
     req: CreateRunRequest,
@@ -187,7 +234,7 @@ def create_run(
 
     def safe_runner() -> None:
         try:
-            run_orchestration(supabase=supabase, run_id=run_id, prompt=req.prompt)
+            run_orchestration(supabase=supabase, run_id=run_id, prompt=req.prompt, user_id=user_id)
         except Exception as exc:  # noqa: BLE001
             supabase.table("agent_events").insert(
                 {
@@ -248,6 +295,54 @@ def list_runs(
         .execute()
     )
     return {"runs": res.data or []}
+
+
+@app.get("/users/me/preferences")
+def get_user_preferences(authorization: str | None = Header(default=None)) -> dict[str, Any]:
+    """Fetch user's accumulated travel preferences and preference count."""
+    user_id = _get_user_id_from_auth_header(authorization)
+
+    try:
+        supabase = get_supabase_admin_client()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    # Get all unique preferences for this user
+    res = (
+        supabase.table("user_preferences")
+        .select("preference_key,preference_value,updated_at")
+        .eq("user_id", user_id)
+        .order("updated_at", desc=True)
+        .execute()
+    )
+
+    preferences: dict[str, str] = {}
+    trips_count = 0
+
+    if res.data:
+        # Group by preference_key, keeping most recent value
+        seen_keys: set[str] = set()
+        for row in res.data:
+            key = row.get("preference_key")
+            if key and key not in seen_keys:
+                preferences[key] = row.get("preference_value", "")
+                seen_keys.add(key)
+
+        # Count unique runs (trips) that contributed to preferences
+        run_ids_res = (
+            supabase.table("user_preferences")
+            .select("run_id")
+            .eq("user_id", user_id)
+            .execute()
+        )
+        if run_ids_res.data:
+            unique_runs = set(row.get("run_id") for row in run_ids_res.data if row.get("run_id"))
+            trips_count = len(unique_runs)
+
+    return {
+        "preferences": preferences,
+        "trips_count": trips_count,
+    }
 
 
 def _placeholder_embedding_1536(text: str) -> list[float]:

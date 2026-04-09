@@ -14,6 +14,8 @@ type AuthContextValue = {
   isConfigured: boolean
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string) => Promise<SignupResult>
+  requestPasswordReset: (email: string) => Promise<void>
+  updatePassword: (password: string) => Promise<void>
   signOut: () => Promise<void>
 }
 
@@ -73,6 +75,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data, error } = await supabase.auth.signUp({ email, password })
         if (error) throw error
         return { requiresEmailConfirmation: !data.session }
+      },
+      requestPasswordReset: async (email) => {
+        if (!supabase) throw new Error(supabaseConfigError ?? 'Supabase client is not configured')
+        const redirectTo = `${window.location.origin}/reset-password`
+        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
+        if (error) throw error
+      },
+      updatePassword: async (password) => {
+        if (!supabase) throw new Error(supabaseConfigError ?? 'Supabase client is not configured')
+        const { error } = await supabase.auth.updateUser({ password })
+        if (error) throw error
       },
       signOut: async () => {
         if (!supabase) return

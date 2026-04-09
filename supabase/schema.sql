@@ -34,18 +34,38 @@ create index if not exists agent_events_run_id_created_at_idx
   on public.agent_events (run_id, created_at);
 
 -- Vector memory: long-term user preferences and history
--- (Adjust embedding dimension to your provider; 1536 matches many OpenAI embeddings)
+-- (384 dimensions for sentence-transformers/all-MiniLM-L6-v2 from Hugging Face)
 create table if not exists public.user_memories (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
   user_id uuid not null,
   content text not null,
-  embedding vector(1536) not null,
+  embedding vector(384) not null,
   metadata jsonb not null default '{}'::jsonb
 );
 
 create index if not exists user_memories_user_id_idx
   on public.user_memories (user_id);
+
+-- User preferences: extracted from completed trips
+create table if not exists public.user_preferences (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  user_id uuid not null,
+  preference_key text not null,
+  preference_value text not null,
+  run_id uuid references public.agent_runs(id) on delete set null,
+  metadata jsonb not null default '{}'::jsonb
+);
+
+create index if not exists user_preferences_user_id_key_idx
+  on public.user_preferences (user_id, preference_key);
+
+create unique index if not exists user_preferences_user_id_key_unique_idx
+  on public.user_preferences (user_id, preference_key);
+
+alter table public.user_preferences replica identity full;
 
 -- Optional: cosine similarity index (requires pgvector >= 0.5 and ivfflat build step)
 -- create index user_memories_embedding_ivfflat_idx
@@ -118,3 +138,31 @@ create policy user_memories_update_own
   for update
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+-- User preferences RLS policies
+alter table public.user_preferences enable row level security;
+
+drop policy if exists user_preferences_select_own on public.user_preferences;
+create policy user_preferences_select_own
+  on public.user_preferences
+  for select
+  using (auth.uid() = user_id);
+
+drop policy if exists user_preferences_insert_own on public.user_preferences;
+create policy user_preferences_insert_own
+  on public.user_preferences
+  for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists user_preferences_update_own on public.user_preferences;
+create policy user_preferences_update_own
+  on public.user_preferences
+  for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists user_preferences_delete_own on public.user_preferences;
+create policy user_preferences_delete_own
+  on public.user_preferences
+  for delete
+  using (auth.uid() = user_id);

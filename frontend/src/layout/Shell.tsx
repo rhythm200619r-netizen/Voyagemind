@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { NavLink } from 'react-router-dom'
 
@@ -41,10 +41,35 @@ function NavItem({ to, end = false, children }: { to: string; end?: boolean; chi
 export default function Shell({ children }: { children: ReactNode }) {
   const { theme, toggleTheme } = useTheme()
   const { user, signOut } = useAuth()
+  const [isAuthMenuOpen, setIsAuthMenuOpen] = useState(false)
+  const authMenuRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (authMenuRef.current && !authMenuRef.current.contains(event.target as Node)) {
+        setIsAuthMenuOpen(false)
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setIsAuthMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleEscape)
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [])
 
   async function handleSignOut() {
     try {
       await signOut()
+      setIsAuthMenuOpen(false)
     } catch {
       // Keep shell resilient even when signout fails due to transient auth issues.
     }
@@ -64,7 +89,7 @@ export default function Shell({ children }: { children: ReactNode }) {
       </div>
 
       <div className="relative z-10">
-        <header className={`border-b backdrop-blur-xl ${theme === 'dark' ? 'border-white/5 bg-[rgba(9,9,13,0.86)] text-[#f5eee5]' : 'border-black/5 bg-[rgba(255,255,255,0.72)] text-[#1a1620]'}`}>
+        <header className={`relative z-40 border-b backdrop-blur-xl ${theme === 'dark' ? 'border-white/5 bg-[rgba(9,9,13,0.86)] text-[#f5eee5]' : 'border-black/5 bg-[rgba(255,255,255,0.72)] text-[#1a1620]'}`}>
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-4">
             <div className="flex items-baseline gap-3">
               <div className={`display text-lg font-semibold tracking-tight ${theme === 'dark' ? 'text-[#f7efe5]' : 'text-[#1a1620]'}`}>VoyageMind</div>
@@ -79,28 +104,82 @@ export default function Shell({ children }: { children: ReactNode }) {
               <NavItem to="/stays">Stays</NavItem>
               <NavItem to="/holidays">Holidays</NavItem>
               <NavItem to="/offers">Offers</NavItem>
-              <NavItem to="/my-trips">My Trips</NavItem>
-              <NavItem to="/runs">Runs</NavItem>
               <NavItem to="/support">Support</NavItem>
               <NavItem to="/about">About</NavItem>
 
-              {user ? (
-                <div className="ml-2 flex items-center gap-2">
-                  <span className={`hidden text-xs sm:block ${theme === 'dark' ? 'text-[#f7efe5]/70' : 'text-[#1a1620]/70'}`}>{user.email}</span>
+              <div className="relative ml-2" ref={authMenuRef}>
+                <Tooltip label={user ? 'Account menu' : 'Login or sign up'} placement="left">
                   <button
                     type="button"
-                    onClick={handleSignOut}
-                    className={`rounded-[12px] border px-3 py-2 text-xs font-semibold transition ${theme === 'dark' ? 'border-white/15 text-[#f3ede4]/85 hover:border-[rgba(212,136,58,0.4)] hover:text-[color:var(--amber)]' : 'border-black/15 text-[#1a1620]/85 hover:border-[rgba(212,136,58,0.5)] hover:text-[color:var(--amber)]'}`}
+                    aria-label={user ? 'Open account menu' : 'Open login and signup menu'}
+                    aria-expanded={isAuthMenuOpen}
+                    aria-haspopup="menu"
+                    onClick={() => setIsAuthMenuOpen((prev) => !prev)}
+                    className={`inline-flex h-10 w-10 items-center justify-center rounded-[12px] border transition ${theme === 'dark' ? 'border-white/15 text-[#f3ede4]/85 hover:border-[rgba(212,136,58,0.4)] hover:text-[color:var(--amber)]' : 'border-black/15 text-[#1a1620]/85 hover:border-[rgba(212,136,58,0.5)] hover:text-[color:var(--amber)]'}`}
                   >
-                    Sign out
+                    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+                      <circle cx="12" cy="8" r="3.5" />
+                      <path d="M5 19c1.4-3.1 4.1-4.7 7-4.7s5.6 1.6 7 4.7" strokeLinecap="round" />
+                    </svg>
                   </button>
-                </div>
-              ) : (
-                <div className="ml-2 flex items-center gap-2">
-                  <NavItem to="/login">Login</NavItem>
-                  <NavItem to="/signup">Sign up</NavItem>
-                </div>
-              )}
+                </Tooltip>
+
+                {isAuthMenuOpen ? (
+                  <div
+                    role="menu"
+                    className={`absolute right-0 top-12 z-50 min-w-[12rem] rounded-[14px] border p-2 shadow-xl backdrop-blur-xl ${theme === 'dark' ? 'border-white/10 bg-[rgba(14,14,20,0.9)]' : 'border-black/10 bg-[rgba(255,255,255,0.95)]'}`}
+                  >
+                    {user ? (
+                      <div className="grid gap-1">
+                        <div className={`px-2 py-1 text-xs ${theme === 'dark' ? 'text-[#f7efe5]/65' : 'text-[#1a1620]/65'}`}>{user.email}</div>
+                        <NavLink
+                          to="/my-trips"
+                          role="menuitem"
+                          onClick={() => setIsAuthMenuOpen(false)}
+                          className={`rounded-[10px] px-2 py-2 text-sm font-semibold transition ${theme === 'dark' ? 'text-[#f3ede4]/85 hover:bg-white/8 hover:text-[color:var(--amber)]' : 'text-[#1a1620]/85 hover:bg-black/5 hover:text-[color:var(--amber)]'}`}
+                        >
+                          My Trips
+                        </NavLink>
+                        <NavLink
+                          to="/personal-info"
+                          role="menuitem"
+                          onClick={() => setIsAuthMenuOpen(false)}
+                          className={`rounded-[10px] px-2 py-2 text-sm font-semibold transition ${theme === 'dark' ? 'text-[#f3ede4]/85 hover:bg-white/8 hover:text-[color:var(--amber)]' : 'text-[#1a1620]/85 hover:bg-black/5 hover:text-[color:var(--amber)]'}`}
+                        >
+                          Personal Info
+                        </NavLink>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={handleSignOut}
+                          className={`rounded-[10px] px-2 py-2 text-left text-sm font-semibold transition ${theme === 'dark' ? 'text-[#f3ede4]/85 hover:bg-white/8 hover:text-[color:var(--amber)]' : 'text-[#1a1620]/85 hover:bg-black/5 hover:text-[color:var(--amber)]'}`}
+                        >
+                          Sign out
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="grid gap-1">
+                        <NavLink
+                          to="/login"
+                          role="menuitem"
+                          onClick={() => setIsAuthMenuOpen(false)}
+                          className={`rounded-[10px] px-2 py-2 text-sm font-semibold transition ${theme === 'dark' ? 'text-[#f3ede4]/85 hover:bg-white/8 hover:text-[color:var(--amber)]' : 'text-[#1a1620]/85 hover:bg-black/5 hover:text-[color:var(--amber)]'}`}
+                        >
+                          Login
+                        </NavLink>
+                        <NavLink
+                          to="/signup"
+                          role="menuitem"
+                          onClick={() => setIsAuthMenuOpen(false)}
+                          className={`rounded-[10px] px-2 py-2 text-sm font-semibold transition ${theme === 'dark' ? 'text-[#f3ede4]/85 hover:bg-white/8 hover:text-[color:var(--amber)]' : 'text-[#1a1620]/85 hover:bg-black/5 hover:text-[color:var(--amber)]'}`}
+                        >
+                          Sign up
+                        </NavLink>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+              </div>
 
               <div className={`ml-2 flex items-center gap-2 rounded-[14px] px-2 py-2 transition ${theme === 'dark' ? 'hover:bg-white/5' : 'hover:bg-black/5'}`}>
                 <span className={`hidden text-xs font-semibold sm:block ${theme === 'dark' ? 'text-[#f7efe5]/60' : 'text-[#1a1620]/62'}`}>Theme</span>

@@ -39,11 +39,11 @@ export default function FlightsPage() {
   return (
     <div className="grid gap-6">
       <section className="grid gap-2">
-        <h1 className="text-2xl font-semibold">Flights</h1>
-        <p className="text-sm text-slate-600">Search flights (MVP starts an AI planning run).</p>
+        <h1 className="display text-2xl font-semibold text-[color:var(--page-text)]">Flights</h1>
+        <p className="text-sm text-[color:var(--body-muted)]">Search flights (MVP starts an AI planning run).</p>
       </section>
 
-      <div className="rounded-2xl bg-slate-900 px-6 py-8 text-white">
+      <div className="theme-surface-strong rounded-[24px] border px-6 py-8">
         <SearchCard modes={['flights']} defaultMode="flights" onSearch={handleSearch} isLoading={isStarting} />
         {error ? <div className="mt-3 text-sm text-red-200">{error}</div> : null}
       </div>

@@ -42,3 +42,20 @@ export async function createRun(prompt: string, budget?: number | string | null,
 
   return (await resp.json()) as { run_id: string }
 }
+
+export async function registerNoEmail(email: string, password: string): Promise<{ user_id: string }> {
+  const resp = await fetch(`${API_URL}/auth/register`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email, password }),
+  })
+
+  if (!resp.ok) {
+    const text = await resp.text()
+    throw new Error(`API error: ${resp.status} ${text}`)
+  }
+
+  return (await resp.json()) as { user_id: string }
+}

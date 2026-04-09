@@ -231,6 +231,34 @@ h2,
     outline: none;
   }
 
+  .vm-field[type='date'] {
+    color: var(--page-text);
+    color-scheme: dark;
+  }
+
+  :root:not(.dark) .vm-field[type='date'] {
+    color-scheme: light;
+  }
+
+  .vm-field[type='date']::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.9;
+    transition: opacity 180ms var(--ease-smooth), transform 180ms var(--ease-smooth);
+  }
+
+  .vm-field[type='date']:hover::-webkit-calendar-picker-indicator {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+
+  :root.dark .vm-field[type='date']::-webkit-calendar-picker-indicator {
+    filter: invert(0.95) sepia(0.25) saturate(0.6) hue-rotate(338deg) brightness(1.05);
+  }
+
+  :root:not(.dark) .vm-field[type='date']::-webkit-calendar-picker-indicator {
+    filter: sepia(0.5) saturate(1.1) hue-rotate(345deg) brightness(0.95);
+  }
+
   .vm-floating-label {
     pointer-events: none;
     position: absolute;
