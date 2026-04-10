@@ -10,6 +10,12 @@ from typing import Any
 import requests
 from supabase import Client
 
+from app.agents.action import TripActionEngine
+from app.agents.memory import MemoryStore
+from app.agents.planning import TripPlanner
+from app.agents.profiling import PromptProfiler
+from app.agents.shared.contracts import RunContext, WorkingState
+
 
 def _extract_days(prompt: str) -> int:
     match = re.search(r"(\d+)\s*[- ]?day", prompt, flags=re.IGNORECASE)
@@ -487,6 +493,25 @@ def _persist_hotel_offers(
         pass
 
 
+def _unpack_action_artifacts(action_artifacts: list[Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    """Extract itinerary/flight/hotel payloads from Action artifacts."""
+
+    itinerary: list[dict[str, Any]] = []
+    flight_options: list[dict[str, Any]] = []
+    hotel_options: list[dict[str, Any]] = []
+
+    for artifact in action_artifacts:
+        payload = artifact.payload if hasattr(artifact, "payload") and isinstance(artifact.payload, dict) else {}
+        if artifact.artifact_type == "itinerary":
+            itinerary = payload.get("itinerary") if isinstance(payload.get("itinerary"), list) else []
+        elif artifact.artifact_type == "flights":
+            flight_options = payload.get("flight_options") if isinstance(payload.get("flight_options"), list) else []
+        elif artifact.artifact_type == "hotels":
+            hotel_options = payload.get("hotel_options") if isinstance(payload.get("hotel_options"), list) else []
+
+    return itinerary, flight_options, hotel_options
+
+
 def run_orchestration(*, supabase: Client, run_id: str, prompt: str, user_id: str | None = None) -> None:
     """Toy multi-agent runner.
 
@@ -494,16 +519,19 @@ def run_orchestration(*, supabase: Client, run_id: str, prompt: str, user_id: st
     Replace with CrewAI/LangGraph orchestration later.
     """
 
+    memory_store = MemoryStore(supabase=supabase)
+    profiler = PromptProfiler()
+    planner = TripPlanner()
+    action_engine = TripActionEngine()
+
     def emit(agent_name: str, event_type: str, content: str | None = None, payload: dict[str, Any] | None = None) -> None:
-        supabase.table("agent_events").insert(
-            {
-                "run_id": run_id,
-                "agent_name": agent_name,
-                "event_type": event_type,
-                "content": content,
-                "payload": payload or {},
-            }
-        ).execute()
+        memory_store.emit(
+            run_id=run_id,
+            agent_name=agent_name,
+            event_type=event_type,
+            content=content,
+            payload=payload or {},
+        )
 
     def set_run_status(status: str) -> None:
         supabase.table("agent_runs").update({"status": status}).eq("id", run_id).execute()
@@ -520,8 +548,10 @@ def run_orchestration(*, supabase: Client, run_id: str, prompt: str, user_id: st
     set_run_status("running")
     emit("Orchestrator", "run_started", f"Received prompt: {prompt}")
 
-    normalized = prompt.strip().lower()
-    is_stays_request = normalized.startswith("find stays") or normalized.startswith("search stays")
+    run_context = RunContext(run_id=run_id, prompt=prompt, user_id=user_id)
+    constraints = profiler.run(run=run_context)
+    execution_plan = planner.run(run=run_context, constraints=constraints)
+    is_stays_request = bool(constraints.intent_flags.get("stays_request", False))
 
     # Agentic = multiple roles with clear tasks + short, user-visible reports.
     emit(
@@ -539,6 +569,18 @@ def run_orchestration(*, supabase: Client, run_id: str, prompt: str, user_id: st
         {"signals": {"stays_request": is_stays_request}},
     )
     time.sleep(0.5)
+
+    emit(
+        "Orchestrator",
+        "agent_decision",
+        "Execution plan generated",
+        {
+            "plan_id": execution_plan.plan_id,
+            "task_order": execution_plan.ordering,
+            "expected_artifacts": execution_plan.expected_artifacts,
+        },
+    )
+    time.sleep(0.2)
 
     if is_stays_request:
         emit(
@@ -606,14 +648,13 @@ def run_orchestration(*, supabase: Client, run_id: str, prompt: str, user_id: st
     )
     time.sleep(0.4)
 
-    days = _extract_days(prompt)
-    destination = _extract_destination(prompt)
-    budget = _extract_budget(prompt)
-    interests = _extract_interests(prompt)
-    dates = _extract_dates(prompt)
-    itinerary = _build_itinerary(days=days, destination=destination, interests=interests, budget=budget)
+    days = constraints.days
+    destination = constraints.destination
+    budget = constraints.budget_usd
+    interests = constraints.interests
+    dates = constraints.dates
 
-    budget_split = _split_budget(budget)
+    budget_split = execution_plan.budget_split
 
     emit(
         "Budget Analyst",
@@ -625,8 +666,14 @@ def run_orchestration(*, supabase: Client, run_id: str, prompt: str, user_id: st
 
     flight_budget = budget_split["flight"] if budget_split else None
     hotel_budget = budget_split["hotel"] if budget_split else None
-    flight_options = _build_flight_options(destination=destination, dates=dates, flight_budget=flight_budget)
-    hotel_options = _build_hotel_options(destination=destination, dates=dates, hotel_budget=hotel_budget, days=days)
+
+    action_artifacts = action_engine.run(
+        run=run_context,
+        plan=execution_plan,
+        state=WorkingState(constraints=constraints, execution_plan=execution_plan),
+    )
+
+    itinerary, flight_options, hotel_options = _unpack_action_artifacts(action_artifacts)
 
     emit(
         "Flight Negotiator",
@@ -661,20 +708,26 @@ def run_orchestration(*, supabase: Client, run_id: str, prompt: str, user_id: st
         },
     )
 
-    _persist_flight_offers(
-        supabase=supabase,
-        run_id=run_id,
-        user_id=user_id,
-        destination=destination,
-        flight_options=flight_options,
-    )
-    _persist_hotel_offers(
-        supabase=supabase,
-        run_id=run_id,
-        user_id=user_id,
-        destination=destination,
-        hotel_options=hotel_options,
-    )
+    if user_id:
+        try:
+            memory_store.persist_flight_offers(
+                run_id=run_id,
+                user_id=user_id,
+                destination=destination,
+                flight_options=flight_options,
+            )
+        except Exception:
+            pass
+
+        try:
+            memory_store.persist_hotel_offers(
+                run_id=run_id,
+                user_id=user_id,
+                destination=destination,
+                hotel_options=hotel_options,
+            )
+        except Exception:
+            pass
 
     # Extract and store travel preferences
     if user_id:
@@ -691,22 +744,15 @@ def run_orchestration(*, supabase: Client, run_id: str, prompt: str, user_id: st
 
         prefs = _extract_preferences_with_llm(result_payload)
 
-        # Upsert each preference into user_preferences table
-        for pref_key, pref_value in prefs.items():
-            if pref_value:
-                try:
-                    supabase.table("user_preferences").upsert(
-                        {
-                            "user_id": user_id,
-                            "preference_key": pref_key,
-                            "preference_value": pref_value,
-                            "run_id": run_id,
-                            "updated_at": time.time(),
-                        },
-                        on_conflict="user_id,preference_key",
-                    ).execute()
-                except Exception:
-                    pass
+        try:
+            memory_store.upsert_preferences(
+                run_id=run_id,
+                user_id=user_id,
+                preferences=prefs,
+                metadata={"source": "travel_dna", "kind": "preferences"},
+            )
+        except Exception:
+            pass
 
         # Generate combined embedding of all preferences for vector search
         preferences_text = "\n".join([f"{k}: {v}" for k, v in prefs.items() if v])
@@ -714,19 +760,17 @@ def run_orchestration(*, supabase: Client, run_id: str, prompt: str, user_id: st
             embedding = _generate_embedding(preferences_text)
             if embedding:
                 try:
-                    supabase.table("user_memories").insert(
-                        {
-                            "user_id": user_id,
-                            "content": f"Travel DNA from trip: {destination}",
-                            "embedding": embedding,
-                            "metadata": {
-                                "run_id": run_id,
-                                "source": "travel_dna",
-                                "kind": "preferences",
-                                **prefs,
-                            },
-                        }
-                    ).execute()
+                    memory_store.insert_user_memory(
+                        user_id=user_id,
+                        content=f"Travel DNA from trip: {destination}",
+                        embedding=embedding,
+                        metadata={
+                            "run_id": run_id,
+                            "source": "travel_dna",
+                            "kind": "preferences",
+                            **prefs,
+                        },
+                    )
                 except Exception:
                     pass
 

@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from app.agents.orchestrator import run_orchestration
+from app.agents.memory import MemoryStore
 from app.settings import settings
 from app.supabase_client import get_supabase_admin_client
 
@@ -638,16 +639,16 @@ def mock_ingest(req: MockIngestRequest) -> MockIngestResponse:
 
     run_id = created.data[0]["id"]
 
+    memory_store = MemoryStore(supabase=supabase)
+
     def emit(agent_name: str, event_type: str, content: str | None, payload: dict[str, Any]) -> None:
-        supabase.table("agent_events").insert(
-            {
-                "run_id": run_id,
-                "agent_name": agent_name,
-                "event_type": event_type,
-                "content": content,
-                "payload": payload,
-            }
-        ).execute()
+        memory_store.emit(
+            run_id=run_id,
+            agent_name=agent_name,
+            event_type=event_type,
+            content=content,
+            payload=payload,
+        )
 
     emit("Orchestrator", "run_started", "MOCK ingest started", {"source": "mock_ingest"})
     emit("Flight Agent", "agent_report", "MOCK flight options parsed", req.flight.model_dump())
