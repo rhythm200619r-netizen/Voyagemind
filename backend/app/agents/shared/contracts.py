@@ -57,6 +57,7 @@ class RunContext:
 class TripConstraints:
     """Normalized prompt constraints extracted by the Profiling module."""
 
+    origin: str | None
     destination: str | None
     days: int
     budget_usd: int | None

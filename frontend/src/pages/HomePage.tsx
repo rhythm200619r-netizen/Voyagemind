@@ -11,18 +11,43 @@ export default function HomePage() {
   const [isStarting, setIsStarting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const [prompt, setPrompt] = useState('Plan a 3-day trip to Tokyo focused on food and museums under $1200')
+  const [prompt, setPrompt] = useState('focused on food and museums')
   const [budget, setBudget] = useState('1200')
 
+  const [fromCity, setFromCity] = useState('')
+  const [toCity, setToCity] = useState('')
+  const [departDate, setDepartDate] = useState('')
+  const [returnDate, setReturnDate] = useState('')
+
   const composedPrompt = useMemo(() => {
-    const raw = prompt.trim()
+    const parts: string[] = []
+    parts.push('Plan a trip')
+
+    const origin = fromCity.trim()
+    const destination = toCity.trim()
+    if (origin) parts.push(`from ${origin}`)
+    if (destination) parts.push(`to ${destination}`)
+    if (departDate) parts.push(`depart ${departDate}`)
+    if (returnDate) parts.push(`return ${returnDate}`)
+
     const numericBudget = budget.trim()
-    if (!raw) return ''
-    if (!numericBudget) return raw
-    const hasBudgetAlready = /\$\s*[0-9]/.test(raw) || /\bunder\b|\bwithin\b|\bbudget\b/i.test(raw)
-    if (hasBudgetAlready) return raw
-    return `${raw} under $${numericBudget}`
-  }, [prompt, budget])
+    if (numericBudget) parts.push(`under $${numericBudget}`)
+
+    const extra = prompt.trim()
+    if (extra) parts.push(extra)
+
+    return parts.join(' ')
+  }, [budget, departDate, fromCity, prompt, returnDate, toCity])
+
+  const missingFields = useMemo(() => {
+    const missing: string[] = []
+    if (!fromCity.trim()) missing.push('departure')
+    if (!toCity.trim()) missing.push('destination')
+    if (!departDate) missing.push('depart date')
+    if (!returnDate) missing.push('return date')
+    if (departDate && returnDate && returnDate < departDate) missing.push('valid date range')
+    return missing
+  }, [departDate, fromCity, returnDate, toCity])
 
   const quickStarts = [
     {
@@ -203,24 +228,71 @@ export default function HomePage() {
                 />
               </label>
 
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <label className="grid min-w-0 gap-1">
+                  <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[#f5eee5]/60">Departure</span>
+                  <input
+                    className="vm-field min-w-0 px-4 py-3 text-sm placeholder:text-[color:var(--body-muted)]"
+                    value={fromCity}
+                    onChange={(e) => setFromCity(e.target.value)}
+                    placeholder="City / Airport"
+                  />
+                </label>
+
+                <label className="grid min-w-0 gap-1">
+                  <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[#f5eee5]/60">Destination</span>
+                  <input
+                    className="vm-field min-w-0 px-4 py-3 text-sm placeholder:text-[color:var(--body-muted)]"
+                    value={toCity}
+                    onChange={(e) => setToCity(e.target.value)}
+                    placeholder="City / Airport"
+                  />
+                </label>
+
+                <label className="grid min-w-0 gap-1">
+                  <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[#f5eee5]/60">Depart</span>
+                  <input
+                    className="vm-field min-w-0 px-4 py-3 text-sm"
+                    type="date"
+                    value={departDate}
+                    onChange={(e) => setDepartDate(e.target.value)}
+                  />
+                </label>
+
+                <label className="grid min-w-0 gap-1">
+                  <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[#f5eee5]/60">Return</span>
+                  <input
+                    className="vm-field min-w-0 px-4 py-3 text-sm"
+                    type="date"
+                    min={departDate || undefined}
+                    value={returnDate}
+                    onChange={(e) => setReturnDate(e.target.value)}
+                  />
+                </label>
+              </div>
+
               <div className="grid gap-3 md:grid-cols-[1fr_auto]">
-                <label className="grid gap-1">
+                <label className="grid min-w-0 gap-1">
                   <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[#f5eee5]/60">Total budget (USD)</span>
                   <input
-                    className="vm-field px-4 py-3 text-sm placeholder:text-[color:var(--body-muted)]"
+                    className="vm-field min-w-0 px-4 py-3 text-sm placeholder:text-[color:var(--body-muted)]"
                     value={budget}
                     onChange={(e) => setBudget(e.target.value)}
                     placeholder="1200"
                     inputMode="numeric"
                   />
-                  <div className="text-xs text-[#f5eee5]/55">Flights, stays, and itinerary planned together.</div>
+                  <div className="text-xs text-[#f5eee5]/55">
+                    {missingFields.length > 0
+                      ? `Add ${missingFields.join(', ')} to plan.`
+                      : 'Flights, stays, and itinerary planned together.'}
+                  </div>
                 </label>
 
                 <button
                   type="button"
                   className="vm-primary-button mt-5 px-5 py-3 text-sm font-semibold text-[#140d07] disabled:opacity-60"
                   onClick={() => handleRun(composedPrompt)}
-                  disabled={Boolean(isStarting) || composedPrompt.trim().length === 0}
+                  disabled={Boolean(isStarting) || missingFields.length > 0}
                 >
                   {isStarting ? 'Starting…' : 'Plan trip'}
                 </button>

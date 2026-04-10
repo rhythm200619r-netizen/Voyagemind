@@ -553,6 +553,13 @@ def get_user_preferences(authorization: str | None = Header(default=None)) -> di
     except RuntimeError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
+    trips_count = 0
+    try:
+        trips_res = supabase.table("agent_runs").select("id").eq("user_id", user_id).eq("booked", True).execute()
+        trips_count = len(trips_res.data or [])
+    except Exception:
+        trips_count = 0
+
     # Get all unique preferences for this user
     res = (
         supabase.table("user_preferences")
@@ -563,7 +570,6 @@ def get_user_preferences(authorization: str | None = Header(default=None)) -> di
     )
 
     preferences: dict[str, str] = {}
-    trips_count = 0
 
     if res.data:
         # Group by preference_key, keeping most recent value
@@ -573,17 +579,6 @@ def get_user_preferences(authorization: str | None = Header(default=None)) -> di
             if key and key not in seen_keys:
                 preferences[key] = row.get("preference_value", "")
                 seen_keys.add(key)
-
-        # Count unique runs (trips) that contributed to preferences
-        run_ids_res = (
-            supabase.table("user_preferences")
-            .select("run_id")
-            .eq("user_id", user_id)
-            .execute()
-        )
-        if run_ids_res.data:
-            unique_runs = set(row.get("run_id") for row in run_ids_res.data if row.get("run_id"))
-            trips_count = len(unique_runs)
 
     return {
         "preferences": preferences,

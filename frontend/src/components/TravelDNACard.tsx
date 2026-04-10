@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import { useAuth } from '../auth/AuthContext'
+import { API_URL } from '../lib/api'
 
 type Preference = {
   accommodation_type?: string
@@ -58,15 +59,17 @@ export default function TravelDNACard() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!user || !supabase) return
-
+    if (!user) return
     async function loadPreferences() {
+      const sb = supabase
+      if (!sb) return
+
       setIsLoading(true)
       setError(null)
       try {
-        const response = await fetch('/users/me/preferences', {
+        const response = await fetch(`${API_URL}/users/me/preferences`, {
           headers: {
-            Authorization: `Bearer ${(await supabase.auth.getSession())?.data?.session?.access_token || ''}`,
+            Authorization: `Bearer ${(await sb.auth.getSession()).data.session?.access_token ?? ''}`,
           },
         })
 
@@ -99,7 +102,7 @@ export default function TravelDNACard() {
     )
   }
 
-  if (!data || !data.trips_count || (data.preferences && Object.keys(data.preferences).length === 0)) {
+  if (!data || !data.trips_count) {
     return (
       <div className="rounded-[18px] border border-white/10 bg-white/5 p-4 backdrop-blur">
         <div className="text-sm text-[color:var(--body-muted)]">Plan your first trip to discover your travel DNA.</div>

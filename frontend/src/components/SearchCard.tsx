@@ -30,6 +30,27 @@ export default function SearchCard({ defaultMode = 'flights', modes, onSearch, i
   const [budget, setBudget] = useState('')
   const [interests, setInterests] = useState('food, museums')
 
+  const missingFields = useMemo(() => {
+    const missing: string[] = []
+
+    if (mode === 'flights') {
+      if (!fromCity.trim()) missing.push('From')
+      if (!toCity.trim()) missing.push('To')
+      if (!departDate) missing.push('Depart')
+      if (!returnDate) missing.push('Return')
+      if (departDate && returnDate && returnDate < departDate) missing.push('valid date range')
+      return missing
+    }
+
+    if (!toCity.trim()) missing.push('City')
+    if (!checkIn) missing.push('Check-in')
+    if (!checkOut) missing.push('Check-out')
+    if (checkIn && checkOut && checkOut < checkIn) missing.push('valid date range')
+    return missing
+  }, [checkIn, checkOut, departDate, fromCity, mode, returnDate, toCity])
+
+  const canSearch = missingFields.length === 0
+
   const prompt = useMemo(() => {
     if (mode === 'flights') {
       const parts: string[] = []
@@ -57,7 +78,7 @@ export default function SearchCard({ defaultMode = 'flights', modes, onSearch, i
 
   const cta = mode === 'flights' ? 'Search flights' : 'Search stays'
   const showTabs = availableModes.length > 1
-  const fieldClass = 'vm-field rounded-[12px] px-3 py-2 text-sm placeholder:text-[color:var(--body-muted)]'
+  const fieldClass = 'vm-field min-w-0 rounded-[12px] px-3 py-2 text-sm placeholder:text-[color:var(--body-muted)]'
   const labelClass = 'text-xs font-semibold text-[color:var(--body-muted)]'
 
   return (
@@ -80,8 +101,8 @@ export default function SearchCard({ defaultMode = 'flights', modes, onSearch, i
       <div className="theme-surface-strong mt-4 grid gap-3 rounded-[18px] border p-4">
         {mode === 'flights' ? (
           <div className="grid gap-3">
-            <div className="grid gap-3 md:grid-cols-4">
-              <label className="grid gap-1">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <label className="grid min-w-0 gap-1">
                 <span className={labelClass}>From</span>
                 <input
                   className={fieldClass}
@@ -90,7 +111,7 @@ export default function SearchCard({ defaultMode = 'flights', modes, onSearch, i
                   placeholder="City / Airport"
                 />
               </label>
-              <label className="grid gap-1">
+              <label className="grid min-w-0 gap-1">
                 <span className={labelClass}>To</span>
                 <input
                   className={fieldClass}
@@ -99,7 +120,7 @@ export default function SearchCard({ defaultMode = 'flights', modes, onSearch, i
                   placeholder="City / Airport"
                 />
               </label>
-              <label className="grid gap-1">
+              <label className="grid min-w-0 gap-1">
                 <span className={labelClass}>Depart</span>
                 <input
                   className={fieldClass}
@@ -108,7 +129,7 @@ export default function SearchCard({ defaultMode = 'flights', modes, onSearch, i
                   onChange={(e) => setDepartDate(e.target.value)}
                 />
               </label>
-              <label className="grid gap-1">
+              <label className="grid min-w-0 gap-1">
                 <span className={labelClass}>Return</span>
                 <input
                   className={fieldClass}
@@ -143,8 +164,8 @@ export default function SearchCard({ defaultMode = 'flights', modes, onSearch, i
             </div>
           </div>
         ) : (
-          <div className="grid gap-3 md:grid-cols-4">
-              <label className="grid gap-1">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <label className="grid min-w-0 gap-1">
                 <span className={labelClass}>City</span>
                 <input
                   className={fieldClass}
@@ -153,7 +174,7 @@ export default function SearchCard({ defaultMode = 'flights', modes, onSearch, i
                   placeholder="Where are you staying?"
                 />
               </label>
-              <label className="grid gap-1">
+              <label className="grid min-w-0 gap-1">
                 <span className={labelClass}>Check-in</span>
                 <input
                   className={fieldClass}
@@ -162,7 +183,7 @@ export default function SearchCard({ defaultMode = 'flights', modes, onSearch, i
                   onChange={(e) => setCheckIn(e.target.value)}
                 />
               </label>
-              <label className="grid gap-1">
+              <label className="grid min-w-0 gap-1">
                 <span className={labelClass}>Check-out</span>
                 <input
                   className={fieldClass}
@@ -171,7 +192,7 @@ export default function SearchCard({ defaultMode = 'flights', modes, onSearch, i
                   onChange={(e) => setCheckOut(e.target.value)}
                 />
               </label>
-              <label className="grid gap-1">
+              <label className="grid min-w-0 gap-1">
                 <span className={labelClass}>Guests</span>
                 <input
                   className={fieldClass}
@@ -186,7 +207,7 @@ export default function SearchCard({ defaultMode = 'flights', modes, onSearch, i
         )}
 
         <div className="grid gap-3 md:grid-cols-[1fr_auto]">
-          <label className="grid gap-1">
+          <label className="grid min-w-0 gap-1">
             <span className={labelClass}>Interests / vibe</span>
             <input
               className={fieldClass}
@@ -200,14 +221,14 @@ export default function SearchCard({ defaultMode = 'flights', modes, onSearch, i
             type="button"
             className="vm-primary-button mt-5 rounded-[12px] px-5 py-2 text-sm font-semibold text-[#140d07] disabled:opacity-60"
             onClick={() => onSearch({ mode, prompt })}
-            disabled={Boolean(isLoading) || prompt.trim().length === 0}
+            disabled={Boolean(isLoading) || !canSearch}
           >
             {isLoading ? 'Starting…' : cta}
           </button>
         </div>
 
         <div className="text-xs text-[color:var(--body-muted)]">
-          This MVP turns your search into an AI prompt and streams results.
+          {canSearch ? 'This MVP turns your search into an AI prompt and streams results.' : `Add ${missingFields.join(', ')} to continue.`}
         </div>
       </div>
     </div>

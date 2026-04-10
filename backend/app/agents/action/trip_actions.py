@@ -5,6 +5,25 @@ from typing import Any
 from app.agents.shared.contracts import ActionArtifact, ActionModule, ExecutionPlan, RunContext, WorkingState
 
 
+def unpack_action_artifacts(action_artifacts: list[ActionArtifact]) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    """Extract itinerary/flight/hotel payloads from Action artifacts."""
+
+    itinerary: list[dict[str, Any]] = []
+    flight_options: list[dict[str, Any]] = []
+    hotel_options: list[dict[str, Any]] = []
+
+    for artifact in action_artifacts:
+        payload = artifact.payload if isinstance(getattr(artifact, "payload", None), dict) else {}
+        if artifact.artifact_type == "itinerary":
+            itinerary = payload.get("itinerary") if isinstance(payload.get("itinerary"), list) else []
+        elif artifact.artifact_type == "flights":
+            flight_options = payload.get("flight_options") if isinstance(payload.get("flight_options"), list) else []
+        elif artifact.artifact_type == "hotels":
+            hotel_options = payload.get("hotel_options") if isinstance(payload.get("hotel_options"), list) else []
+
+    return itinerary, flight_options, hotel_options
+
+
 def _build_itinerary(*, days: int, destination: str | None, interests: list[str], budget: int | None) -> list[dict[str, Any]]:
     place = destination or "your destination"
 
@@ -59,7 +78,13 @@ def _build_itinerary(*, days: int, destination: str | None, interests: list[str]
     return itinerary
 
 
-def _build_flight_options(*, destination: str | None, dates: dict[str, str], flight_budget: int | None) -> list[dict[str, Any]]:
+def _build_flight_options(
+    *,
+    origin: str | None,
+    destination: str | None,
+    dates: dict[str, str],
+    flight_budget: int | None,
+) -> list[dict[str, Any]]:
     if destination is None:
         return []
 
@@ -80,10 +105,11 @@ def _build_flight_options(*, destination: str | None, dates: dict[str, str], fli
     for carrier, price, stops, depart_time, arrive_time in candidates:
         if flight_budget is not None and price > flight_budget:
             continue
+        origin_label = origin or "Origin"
         options.append(
             {
                 "carrier": carrier,
-                "route": f"Origin → {destination}",
+                "route": f"{origin_label} → {destination}",
                 "depart_date": depart,
                 "return_date": ret,
                 "depart_time": depart_time,
@@ -175,6 +201,7 @@ class TripActionEngine(ActionModule):
 
             elif task_id == "flight_strategy":
                 flight_options = _build_flight_options(
+                    origin=constraints.origin,
                     destination=constraints.destination,
                     dates=constraints.dates,
                     flight_budget=flight_budget,

@@ -25,9 +25,20 @@ export default function FloatingAssistant() {
   const [isPlanning, setIsPlanning] = useState(false)
   const [prompt, setPrompt] = useState('')
   const [budget, setBudget] = useState('')
+  const [fromCity, setFromCity] = useState('')
+  const [toCity, setToCity] = useState('')
+  const [departDate, setDepartDate] = useState('')
+  const [returnDate, setReturnDate] = useState('')
   const [promptFocused, setPromptFocused] = useState(false)
   const [budgetFocused, setBudgetFocused] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const missingFields: string[] = []
+  if (!fromCity.trim()) missingFields.push('departure')
+  if (!toCity.trim()) missingFields.push('destination')
+  if (!departDate) missingFields.push('depart date')
+  if (!returnDate) missingFields.push('return date')
+  if (departDate && returnDate && returnDate < departDate) missingFields.push('valid date range')
 
   const { refs, floatingStyles, context } = useFloating({
     open: isOpen,
@@ -44,7 +55,7 @@ export default function FloatingAssistant() {
   const { getReferenceProps, getFloatingProps } = useInteractions([click, dismiss, role])
 
   async function handleRun() {
-    if (!prompt.trim()) return
+    if (missingFields.length > 0) return
     if (!user) {
       navigate('/login')
       return
@@ -54,10 +65,27 @@ export default function FloatingAssistant() {
     setError(null)
 
     try {
-      const data = await createRun(budget ? `${prompt} under $${budget}` : prompt)
+      const parts: string[] = []
+      parts.push('Plan a trip')
+      parts.push(`from ${fromCity.trim()}`)
+      parts.push(`to ${toCity.trim()}`)
+      parts.push(`depart ${departDate}`)
+      parts.push(`return ${returnDate}`)
+
+      const numericBudget = budget.trim()
+      if (numericBudget) parts.push(`under $${numericBudget}`)
+
+      const extra = prompt.trim()
+      if (extra) parts.push(extra)
+
+      const data = await createRun(parts.join(' '))
       setIsOpen(false)
       setPrompt('')
       setBudget('')
+      setFromCity('')
+      setToCity('')
+      setDepartDate('')
+      setReturnDate('')
       navigate(`/trips/${data.run_id}`)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -108,6 +136,49 @@ export default function FloatingAssistant() {
                   </header>
 
                   <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <label className="grid gap-1">
+                        <span className="text-xs font-semibold text-[color:var(--body-muted)]">Departure</span>
+                        <input
+                          value={fromCity}
+                          onChange={(e) => setFromCity(e.target.value)}
+                          placeholder="City / Airport"
+                          className="vm-field px-4 py-3 text-sm"
+                        />
+                      </label>
+
+                      <label className="grid gap-1">
+                        <span className="text-xs font-semibold text-[color:var(--body-muted)]">Destination</span>
+                        <input
+                          value={toCity}
+                          onChange={(e) => setToCity(e.target.value)}
+                          placeholder="City / Airport"
+                          className="vm-field px-4 py-3 text-sm"
+                        />
+                      </label>
+
+                      <label className="grid gap-1">
+                        <span className="text-xs font-semibold text-[color:var(--body-muted)]">Depart</span>
+                        <input
+                          type="date"
+                          value={departDate}
+                          onChange={(e) => setDepartDate(e.target.value)}
+                          className="vm-field px-4 py-3 text-sm"
+                        />
+                      </label>
+
+                      <label className="grid gap-1">
+                        <span className="text-xs font-semibold text-[color:var(--body-muted)]">Return</span>
+                        <input
+                          type="date"
+                          min={departDate || undefined}
+                          value={returnDate}
+                          onChange={(e) => setReturnDate(e.target.value)}
+                          className="vm-field px-4 py-3 text-sm"
+                        />
+                      </label>
+                    </div>
+
                     <div className="relative">
                       <textarea
                         autoFocus
@@ -146,9 +217,15 @@ export default function FloatingAssistant() {
                       </div>
                     ) : null}
 
+                    {missingFields.length > 0 ? (
+                      <div className="rounded-[18px] border border-white/10 bg-white/5 p-3 text-xs text-[color:var(--body-muted)]">
+                        Add {missingFields.join(', ')} to plan.
+                      </div>
+                    ) : null}
+
                     <button
                       type="button"
-                      disabled={isPlanning || !prompt.trim()}
+                      disabled={isPlanning || missingFields.length > 0}
                       onClick={handleRun}
                       className={`vm-primary-button w-full py-3.5 text-sm font-semibold ${isPlanning ? 'is-loading' : ''}`}
                     >

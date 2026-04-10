@@ -203,7 +203,7 @@ export default function TripDetailsPage() {
           setOffersError(null)
         } catch (offerErr) {
           setOffersError(offerErr instanceof Error ? offerErr.message : String(offerErr))
-          setOffers({ flight_offers: [], hotel_offers: [] })
+          setOffers({ flight_offers: [], hotel_offers: [], booked: false })
         }
       }
 

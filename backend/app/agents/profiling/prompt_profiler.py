@@ -1,19 +1,49 @@
 from __future__ import annotations
 
+from datetime import date
 import re
 
 from app.agents.shared.contracts import ProfilingModule, RunContext, TripConstraints
 
 
-def _extract_days(prompt: str) -> int:
+def _extract_days(prompt: str) -> int | None:
     match = re.search(r"(\d+)\s*[- ]?day", prompt, flags=re.IGNORECASE)
     if not match:
-        return 3
+        return None
     try:
         days = int(match.group(1))
         return max(1, min(days, 14))
     except ValueError:
-        return 3
+        return None
+
+
+def _parse_iso_date(value: str | None) -> date | None:
+    if not value or not isinstance(value, str):
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def _infer_days_from_dates(dates: dict[str, str]) -> int | None:
+    depart = _parse_iso_date(dates.get("depart"))
+    ret = _parse_iso_date(dates.get("return"))
+    if depart and ret:
+        delta = (ret - depart).days + 1
+        if delta <= 0:
+            return None
+        return max(1, min(delta, 14))
+
+    check_in = _parse_iso_date(dates.get("check_in"))
+    check_out = _parse_iso_date(dates.get("check_out"))
+    if check_in and check_out:
+        delta = (check_out - check_in).days + 1
+        if delta <= 0:
+            return None
+        return max(1, min(delta, 14))
+
+    return None
 
 
 def _extract_budget(prompt: str) -> int | None:
@@ -31,7 +61,25 @@ def _extract_destination(prompt: str) -> str | None:
     if not match:
         return None
     raw = match.group(1)
-    raw = re.split(r"\b(for|with|under|within|budget|on)\b", raw, flags=re.IGNORECASE)[0]
+    raw = re.split(
+        r"\b(for|with|under|within|budget|on|depart|return|check-in|check-out|checkin|checkout)\b",
+        raw,
+        flags=re.IGNORECASE,
+    )[0]
+    cleaned = " ".join(raw.strip().split())
+    return cleaned[:50] if cleaned else None
+
+
+def _extract_origin(prompt: str) -> str | None:
+    match = re.search(r"\bfrom\s+([A-Za-z][A-Za-z\s-]{0,48}?)(?:\s+to\b|$)", prompt, flags=re.IGNORECASE)
+    if not match:
+        return None
+    raw = match.group(1)
+    raw = re.split(
+        r"\b(for|with|under|within|budget|on|depart|return|check-in|check-out|checkin|checkout)\b",
+        raw,
+        flags=re.IGNORECASE,
+    )[0]
     cleaned = " ".join(raw.strip().split())
     return cleaned[:50] if cleaned else None
 
@@ -104,9 +152,14 @@ class PromptProfiler(ProfilingModule):
         budget = _extract_budget(run.prompt)
         dates = _extract_dates(run.prompt)
 
+        explicit_days = _extract_days(run.prompt)
+        inferred_days = _infer_days_from_dates(dates) if explicit_days is None else None
+        days = explicit_days or inferred_days or 3
+
         return TripConstraints(
+            origin=_extract_origin(run.prompt),
             destination=_extract_destination(run.prompt),
-            days=_extract_days(run.prompt),
+            days=days,
             budget_usd=budget,
             interests=_extract_interests(run.prompt),
             dates=dates,
