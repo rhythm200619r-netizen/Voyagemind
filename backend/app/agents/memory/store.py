@@ -12,14 +12,14 @@ from supabase import Client
 
 from app.agents.shared.contracts import (
     ActionArtifact,
-    AgentEvent,
     ExecutionPlan,
     EventType,
-    MemoryModule,
     ModuleName,
     TripConstraints,
     WorkingState,
 )
+from app.agents.shared.events import AgentEvent
+from app.agents.memory.base import MemoryModule
 from app.agents.shared.module_mapping import module_for_agent
 
 

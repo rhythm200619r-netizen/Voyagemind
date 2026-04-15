@@ -1,8 +1,8 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from supabase import Client
 
-from app.agents.action import TripActionEngine, unpack_action_artifacts
+from app.agents.action import FlightAction, HotelAction, ItineraryAction, unpack_action_artifacts
 from app.agents.memory import MemoryStore
 from app.agents.planning import TripPlanner
 from app.agents.profiling import PromptProfiler
@@ -29,11 +29,11 @@ def run_orchestration(*, supabase: Client, run_id: str, prompt: str, user_id: st
 
     memory_store.emit_mvp_pre_action_events(run_id=run_id, constraints=constraints, plan=plan)
 
-    artifacts = TripActionEngine().run(
-        run=run,
-        plan=plan,
-        state=WorkingState(constraints=constraints, execution_plan=plan),
-    )
+    state = WorkingState(constraints=constraints, execution_plan=plan)
+    artifacts = []
+    artifacts.extend(ItineraryAction().run(run=run, plan=plan, state=state))
+    artifacts.extend(FlightAction().run(run=run, plan=plan, state=state))
+    artifacts.extend(HotelAction().run(run=run, plan=plan, state=state))
     itinerary, flight_options, hotel_options = unpack_action_artifacts(artifacts)
 
     flight_budget = plan.budget_split.get("flight") if plan.budget_split else None

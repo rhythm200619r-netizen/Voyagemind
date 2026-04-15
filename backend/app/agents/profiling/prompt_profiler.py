@@ -3,7 +3,8 @@ from __future__ import annotations
 from datetime import date
 import re
 
-from app.agents.shared.contracts import ProfilingModule, RunContext, TripConstraints
+from app.agents.shared.contracts import RunContext, TripConstraints
+from app.agents.profiling.base import ProfilingModule
 
 
 def _extract_days(prompt: str) -> int | None:

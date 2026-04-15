@@ -4,10 +4,10 @@ from app.agents.shared.contracts import (
     ExecutionPlan,
     ModuleName,
     PlanTask,
-    PlanningModule,
     RunContext,
     TripConstraints,
 )
+from app.agents.planning.base import PlanningModule
 
 
 def _allocate_budget(total_budget: int | None) -> dict[str, int] | None:

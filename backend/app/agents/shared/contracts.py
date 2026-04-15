@@ -117,24 +117,7 @@ class WorkingState:
     last_event_id: int | None = None
 
 
-@dataclass(slots=True)
-class AgentEvent:
-    """Canonical event envelope for internal module communication.
 
-    Compatibility note:
-    - Keep legacy fields compatible with existing agent_events rows.
-    - module and event_version are additive and optional at persistence layer.
-    """
-
-    run_id: str
-    agent_name: str
-    event_type: EventType
-    payload: dict[str, Any] = field(default_factory=dict)
-    content: str | None = None
-    module: ModuleName | None = None
-    event_version: int = 1
-    timestamp_utc: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    event_id: int | None = None
 
 
 @dataclass(slots=True)
@@ -147,32 +130,4 @@ class OrchestrationResult:
     failure_reason: str | None = None
 
 
-class ProfilingModule(Protocol):
-    """Profile user intent and constraints from free-text prompt."""
 
-    def run(self, *, run: RunContext) -> TripConstraints:
-        ...
-
-
-class PlanningModule(Protocol):
-    """Decompose and sequence execution based on constraints."""
-
-    def run(self, *, run: RunContext, constraints: TripConstraints) -> ExecutionPlan:
-        ...
-
-
-class ActionModule(Protocol):
-    """Execute planned tasks and return artifacts."""
-
-    def run(self, *, run: RunContext, plan: ExecutionPlan, state: WorkingState) -> list[ActionArtifact]:
-        ...
-
-
-class MemoryModule(Protocol):
-    """Persist and replay run state/events and long-term memory."""
-
-    def append_event(self, event: AgentEvent) -> int | None:
-        ...
-
-    def get_latest_state(self, *, run_id: str) -> WorkingState:
-        ...
