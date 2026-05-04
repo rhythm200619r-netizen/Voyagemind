@@ -36,6 +36,12 @@ EventType = Literal[
     "result",
     "run_completed",
     "error",
+    "profiling_complete",
+    "planning_complete",
+    "itinerary_drafted",
+    "flight_strategy_ready",
+    "hotel_strategy_ready",
+    "llm_error",
 ]
 
 
