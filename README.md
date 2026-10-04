@@ -1,219 +1,207 @@
 # VoyageMind
 
-Prompt-first travel planning MVP with authenticated runs and live event streaming.
+AI-powered travel planning platform with multi-agent orchestration, long-term vector memory, authenticated runs, interactive travel assistant chat, and live event streaming.
 
-VoyageMind lets a user describe a trip in plain English and get:
-- Budget-aware flight options
-- Budget-aware hotel options
-- A day-by-day itinerary
-- Live agent updates streamed on the trip details page
-- User-scoped trip history (users only see their own runs)
+VoyageMind lets a user describe a trip in plain English and automatically generates:
+- **Budget-aware flight options** (via Sky Scrapper / Skyscanner RapidAPI with smart fallbacks)
+- **Budget-aware hotel options** (via Booking.com RapidAPI with smart fallbacks)
+- **Day-by-day rich itinerary** curated to traveler preferences and pace
+- **Travel DNA & Long-term Memory** (stored in Supabase `pgvector` with MiniLM embeddings, automatically remembered for future trip planning)
+- **Interactive AI Travel Assistant** (floating chat widget connected to the backend for real-time itinerary tweaking, questions, and destination advice)
+- **Live agent updates streamed in real-time** via Supabase Realtime + polling fallback
+- **User-scoped trip history & preferences** protected with Supabase Auth
 
-Under the hood:
-- Backend (FastAPI) creates runs and writes agent events to Supabase
-- Frontend (React + Tailwind) listens to those events with Supabase Realtime
-- A polling fallback keeps the UI resilient if realtime temporarily drops
-- Supabase Auth (email/password) is used for frontend login/signup
+---
 
-## Current MVP Features
-- Premium Home page with quick starts + editorial destination cards
-- Rule-based orchestrator with specialist event logs (parser, flight, hotel, itinerary, budget)
-- Result payload includes destination, dates, interests, budget split, flight options, hotel options, itinerary
-- Structured trip details view (itinerary + flight/hotel cards)
-- Login and signup pages
-- Protected trip/run routes
-- Light and dark theme toggle
-- Enhanced Support, Offers, and Holidays pages (MVP content + launch CTAs)
+## Architecture & Features
+
+### 1. Multi-Agent Pipeline
+- **Prompt Profiler**: Parses unstructured prompts into structured constraints (dates, origins, destinations, budgets, pace, and interests) using LLMs.
+- **Memory Retrieval**: Pulls the user's past travel preferences and cosine-similar vector memories from previous trips to contextualize constraints.
+- **Trip Planner**: Generates execution plans, computes optimal budget allocations between flights, stays, and activities.
+- **Specialist Agents**:
+  - `FlightAction`: Searches real-time flight options matching timing and budget tiers.
+  - `HotelAction`: Discovers real-time hotel and accommodation options with neighborhood details and ratings.
+  - `ItineraryAction`: Synthesizes full multi-day itineraries with daily highlights and pacing.
+- **Memory Store & Travel DNA**: Extracts structured preferences (using Groq) and generates 384-dim vector embeddings (using Hugging Face's inference API), persisting them into `user_memories` (`vector(384)`) and `user_preferences`.
+
+### 2. Interactive AI Travel Assistant
+- Embedded floating chat widget available across the app.
+- Chat endpoint (`POST /chat`) that provides contextualized assistance for planned trips, destinations, and recommendations.
+
+### 3. Realtime Streaming & Resilience
+- Live agent step-by-step progress streamed directly to the frontend via Supabase Realtime WebSocket channels.
+- Automatic polling fallback ensures zero missed events if WebSocket connectivity fluctuates.
+
+---
 
 ## Tech Stack
-- Frontend: React, TypeScript, Tailwind CSS, Supabase JS
-- Backend: Python, FastAPI
-- Data + Realtime: Supabase Postgres + Realtime
-- Memory schema: pgvector table included in SQL schema
+
+- **Frontend**: React 18, TypeScript, Tailwind CSS, Supabase JS, Lucide Icons, Vite
+- **Backend**: Python 3.10+, FastAPI, Pydantic, HTTPX, python-dotenv
+- **LLM & Inference**:
+  - Google Gemini API (`gemini-2.5-flash`)
+  - Groq API (`openai/gpt-oss-20b` / Llama models)
+  - Hugging Face Inference API (`sentence-transformers/all-MiniLM-L6-v2`)
+- **Data & Vector Store**: Supabase Postgres with `pgvector` extension and Row-Level Security (RLS)
+- **Live Travel APIs**: RapidAPI (Sky Scrapper + Booking.com)
+
+---
 
 ## Project Structure
-- [backend](backend) - FastAPI API and orchestration logic
-- [frontend](frontend) - React app, pages, realtime subscriptions
-- [supabase/schema.sql](supabase/schema.sql) - database schema
-- [run.ps1](run.ps1) - one-command local startup on Windows
 
-## Prerequisites
+- [`backend/`](backend) — FastAPI application, agent modules, memory store, and API routers
+- [`frontend/`](frontend) — React application, UI components, realtime subscriptions, and ChatWidget
+- [`supabase/schema.sql`](supabase/schema.sql) — Postgres schema, RLS policies, tables (`agent_runs`, `agent_events`, `flight_offers`, `hotel_offers`, `user_memories`, `user_preferences`), and `match_user_memories` vector RPC function
+- [`run.ps1`](run.ps1) — One-command startup script for Windows
+
+---
+
+## Getting Started
+
+### Prerequisites
 - Node.js 18+ (Node.js 20+ recommended)
 - Python 3.10+ (Python 3.11 recommended)
-- Supabase project
+- A Supabase project with `pgvector` enabled
 
-## 1) Supabase Setup
+---
+
+### 1) Supabase Setup
 1. Create a Supabase project.
-2. Run [supabase/schema.sql](supabase/schema.sql) in Supabase SQL Editor.
-3. Enable realtime for events table:
+2. Run [`supabase/schema.sql`](supabase/schema.sql) in your Supabase SQL Editor.
+3. Enable realtime for the `agent_events` table:
 
 ```sql
 alter publication supabase_realtime add table public.agent_events;
 ```
 
-Optional:
-
+*(Optional: also add `agent_runs` if you want realtime run state updates)*
 ```sql
 alter publication supabase_realtime add table public.agent_runs;
 ```
 
-4. Ensure RLS policies allow browser reads for the frontend anon key on:
-- `public.agent_runs` (select only own rows)
-- `public.agent_events` (select only events belonging to own runs)
+4. Verify RLS policies are active. The provided schema automatically configures RLS policies based on `auth.uid()`.
 
-This repository's SQL schema enables RLS and creates ownership policies based on `auth.uid()`.
+---
 
-## 2) Backend Setup
-From [backend](backend):
+### 2) Backend Setup
 
-1. Create and activate venv:
+From the `backend/` directory:
 
+1. Create and activate a Python virtual environment:
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
 2. Install dependencies:
-
 ```powershell
 pip install -r requirements.txt
 ```
 
-3. Create env file:
-- Copy [backend/.env.example](backend/.env.example) to `backend/.env`
-- Set:
-  - `SUPABASE_URL`
-  - `SUPABASE_SERVICE_ROLE_KEY`
+3. Create your `.env` configuration file:
+- Copy `backend/.env.example` to `backend/.env`
+- Configure your API keys:
+  - `SUPABASE_URL` & `SUPABASE_SERVICE_ROLE_KEY`
+  - `GEMINI_API_KEY`
+  - `GROQ_API_KEY`
+  - `HF_TOKEN`
+  - `RAPIDAPI_KEY`
 
-4. Run API:
-
+4. Run the FastAPI server:
 ```powershell
 uvicorn app.main:app --app-dir . --reload --port 8000
 ```
 
-Backend endpoints:
-- `GET /health`
-- `POST /runs` (requires `Authorization: Bearer <supabase_access_token>`)
-- `GET /runs` (requires `Authorization` header; returns current user's runs)
-- `GET /runs/{run_id}` (requires `Authorization`; only owner can read)
-- `POST /mock/ingest`
+#### Backend Endpoints
+- `GET /health` — Health check
+- `POST /runs` — Create and kick off a new multi-agent trip planning run (requires `Authorization: Bearer <supabase_token>`)
+- `GET /runs` — List runs created by the authenticated user
+- `GET /runs/{run_id}` — Get single run details and working state
+- `GET /runs/{run_id}/offers` — Get flight and hotel offers generated for a run
+- `POST /chat` — AI Travel Assistant chat endpoint
+- `POST /mock/ingest` — Mock ingestion utility for testing
 
-Auth behavior:
-- The backend validates bearer tokens via Supabase Auth.
-- `POST /runs` always binds `user_id` from the token, not from arbitrary client input.
+---
 
-## 3) Frontend Setup
-From [frontend](frontend):
+### 3) Frontend Setup
+
+From the `frontend/` directory:
 
 1. Install dependencies:
-
 ```powershell
 npm install
 ```
 
-2. Create env file:
-- Copy [frontend/.env.example](frontend/.env.example) to `frontend/.env`
+2. Create your `.env` configuration file:
+- Copy `frontend/.env.example` to `frontend/.env`
 - Set:
-  - `VITE_API_URL` (default: `http://localhost:8000`)
-  - `VITE_SUPABASE_URL`
-  - `VITE_SUPABASE_ANON_KEY`
+  - `VITE_API_URL=http://localhost:8000`
+  - `VITE_SUPABASE_URL=https://your-project.supabase.co`
+  - `VITE_SUPABASE_ANON_KEY=your-supabase-anon-key`
 
-3. Run dev server:
-
+3. Run the development server:
 ```powershell
 npm run dev
 ```
 
-Open `http://localhost:5173`.
+The application will be running at `http://localhost:5173`.
 
-Authentication flow:
-- Visit `/signup` to create an account.
-- Visit `/login` to sign in.
-- Protected pages redirect to `/login` when signed out.
+---
 
-## 4) One-Command Startup (Windows)
-After backend and frontend env files are configured:
+### 4) One-Command Startup (Windows)
+
+Once both `.env` files are configured, launch everything simultaneously:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\run.ps1
 ```
 
-This starts backend and frontend in separate PowerShell windows and opens the app.
+---
 
-## Routes
-Current frontend routes:
-- `/` - Home (editorial landing + quick launch)
-- `/flights`
-- `/stays`
-- `/holidays`
-- `/offers`
-- `/my-trips` (protected)
-- `/trips/:runId` (protected) - detailed timeline and result cards
-- `/runs` (protected)
-- `/runs/:runId` (protected)
-- `/support`
-- `/about`
-- `/login` (public-only)
-- `/signup` (public-only)
+## Frontend Routes
 
-`/plan` redirects to `/`.
+- `/` — Home (Hero prompt input, quick start templates, destination showcases)
+- `/trips/:runId` — Detailed timeline with live streaming event log, flight/hotel cards, and full itinerary
+- `/my-trips` — History of past generated trips (protected)
+- `/flights` — Flight search & inspiration
+- `/stays` — Accommodations search & inspiration
+- `/holidays` — Curated holiday packages
+- `/offers` — Featured deals
+- `/support` / `/about` — Support and platform information
+- `/login` / `/signup` — Supabase authentication
 
-## Live Tracking: How It Connects
-Live tracking is implemented on [frontend/src/pages/TripDetailsPage.tsx](frontend/src/pages/TripDetailsPage.tsx).
+---
 
-Flow:
-1. Frontend subscribes to Supabase Realtime for `INSERT` on `public.agent_events` filtered by current `run_id`.
-2. New events are appended to the timeline immediately.
-3. Frontend also fetches existing run + event history to avoid race conditions.
-4. While run status is queued/running, frontend polls periodically as fallback resilience.
+## Live Event Tracking & Memory Architecture
 
-Why polling exists:
-- Realtime can occasionally drop or reconnect.
-- Polling ensures results still appear without requiring manual refresh.
+```
+User Prompt
+    │
+    ▼
+PromptProfiler (LLM extraction)
+    │
+    ├─► Reads past user_preferences & vector similarity from user_memories
+    ▼
+TripPlanner (Budget Allocation & Execution Graph)
+    │
+    ├──► FlightAction Agent ──► RapidAPI / Fallback ──► flight_offers table
+    ├──► HotelAction Agent  ──► RapidAPI / Fallback ──► hotel_offers table
+    └──► ItineraryAction    ──► Daily Itinerary Generator
+            │
+            ▼
+    Result Payload Formed
+            │
+            ├─► Emits live status to public.agent_events (Realtime stream to UI)
+            ├─► Groq extracts Travel DNA preferences ──► user_preferences
+            └─► HuggingFace generates MiniLM embedding ──► user_memories (pgvector)
+```
 
-### Live Tracking Checklist
-- Frontend env is set (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`)
-- Backend env is set (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`)
-- `agent_events` is in `supabase_realtime` publication
-- RLS select policies permit authenticated user reads for their own runs/events
-- Backend is writing events to `agent_events`
+---
 
 ## Troubleshooting
-### Realtime updates do not appear
-- Confirm frontend env values are present and app restarted.
-- Confirm backend is running and `POST /runs` succeeds.
-- Confirm `agent_events` has rows for the run in Supabase Table Editor.
-- Confirm table publication includes `public.agent_events`.
-- Confirm you are signed in and RLS policies allow your user to read own rows.
 
-### Works only after reload
-- Usually means subscription timing or policy issue.
-- This app already includes subscribe-first + fetch + fallback polling on trip details.
-- If still happening, verify browser console for Supabase auth/RLS errors.
-
-### I can log in but cannot create runs
-- Confirm `VITE_API_URL` points to the running backend.
-- Confirm requests to `POST /runs` include `Authorization: Bearer <token>` (frontend does this automatically).
-- Confirm backend can validate Supabase token using `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
-
-### I cannot see trips I created earlier
-- Runs are user-scoped now. Sign in with the same account that created the runs.
-- If you changed auth accounts, old runs from another user will not be visible.
-
-### Run fails quickly
-- Check backend logs for missing service role key or Supabase errors.
-- Validate [backend/.env.example](backend/.env.example) values are copied to `backend/.env`.
-
-## Security Notes
-- Never expose `SUPABASE_SERVICE_ROLE_KEY` in frontend code or client env.
-- Keep service-role usage server-side only.
-- Do not commit real secrets in `.env` files.
-
-## Accomplished So Far
-- Replaced rule-based orchestration with tool-connected agents (LLM + providers via `PromptProfiler`, `TripPlanner`, etc.)
-- Added real provider integrations for flights (Skyscanner via Sky Scrapper) and hotels (Booking.com) using RapidAPI, providing fresh pricing.
-- Added backend APIs (`/runs` and `/runs/{run_id}/offers`) to consolidate trip data reads.
-
-## Next Improvements (To Do)
-- Wire real embeddings + retrieval for user memory (currently using a deterministic placeholder `_placeholder_embedding_1536`).
-- Ensure all frontend components exclusively use the backend `/runs` APIs for trip reads (move away from direct Supabase Realtime reads for historical data if any remain).
+- **Realtime events not updating**: Verify `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in `backend/.env`, check that `agent_events` is added to the `supabase_realtime` publication, and check browser console for Supabase WebSocket connection.
+- **Empty user memories or preferences**: Ensure `GROQ_API_KEY` and `HF_TOKEN` are populated in `backend/.env`.
+- **Live flight/hotel search returns fallback**: Verify `RAPIDAPI_KEY` has active subscriptions to Sky Scrapper and Booking.com APIs.
+- **Auth Errors**: Ensure `VITE_SUPABASE_URL` matches `SUPABASE_URL` on the backend.
