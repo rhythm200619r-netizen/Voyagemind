@@ -11,13 +11,33 @@ logger = logging.getLogger(__name__)
 class PromptProfiler(ProfilingModule):
     """Profiles user prompts into normalized trip constraints using Claude."""
 
-    async def run(self, *, run: RunContext, memory_store: MemoryStore) -> TripConstraints:
+    async def run(
+        self,
+        *,
+        run: RunContext,
+        memory_store: MemoryStore,
+        past_preferences: dict[str, str] | None = None,
+        relevant_memories: list[dict] | None = None
+    ) -> TripConstraints:
         normalized = run.prompt.strip().lower()
         is_stays_request = normalized.startswith("find stays") or normalized.startswith("search stays")
 
+        user_prompt = run.prompt
+        
+        context_blocks = []
+        if past_preferences:
+            prefs_str = "\n".join([f"- {k}: {v}" for k, v in past_preferences.items()])
+            context_blocks.append(f"--- known preferences from past trips ---\n{prefs_str}")
+        if relevant_memories:
+            mems_str = "\n".join([f"- {m.get('content', '')}" for m in relevant_memories])
+            context_blocks.append(f"--- relevant memories from past trips ---\n{mems_str}")
+            
+        if context_blocks:
+            user_prompt += "\n\n" + "\n\n".join(context_blocks)
+
         parsed_json, input_tokens, output_tokens = await async_call_claude(
             system_prompt=PROMPT_PROFILER_SYSTEM,
-            user_prompt=run.prompt,
+            user_prompt=user_prompt,
         )
 
         if not parsed_json:

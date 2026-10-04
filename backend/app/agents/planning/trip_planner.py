@@ -111,6 +111,7 @@ Travel Style: {constraints.intent_flags.get('travel_style', 'balanced')}
             "flight_options",
             "hotel_options",
         ]
+        plan.plan_summary = plan_summary
 
         memory_store.emit(
             run_id=run.run_id,

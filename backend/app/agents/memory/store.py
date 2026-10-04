@@ -32,7 +32,6 @@ def _extract_preferences_with_llm(result_payload: dict[str, Any]) -> dict[str, s
 
     If GROQ_API_KEY is not set, returns an empty dict.
     """
-
     groq_api_key = os.environ.get("GROQ_API_KEY")
     if not groq_api_key:
         return {}
@@ -72,10 +71,10 @@ Return only valid JSON, no explanation."""
                 "Content-Type": "application/json",
             },
             json={
-                "model": "llama-3.1-8b-instant",
+                "model": "openai/gpt-oss-20b",
                 "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.3,
-                "max_tokens": 500,
+                "max_tokens": 1500,
             },
             timeout=10.0,
         )
@@ -102,14 +101,13 @@ def _generate_embedding(text: str) -> list[float] | None:
     Returns a list of floats (typically 384 dims for all-MiniLM-L6-v2).
     If HF_TOKEN is not set or the request fails, returns None.
     """
-
     hf_token = os.environ.get("HF_TOKEN")
     if not hf_token:
         return None
 
     try:
         response = httpx.post(
-            "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2",
+            "https://router.huggingface.co/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction",
             headers={"Authorization": f"Bearer {hf_token}"},
             json={"inputs": text},
             timeout=10.0,
@@ -452,6 +450,7 @@ class MemoryStore(MemoryModule):
                 "flight_strategy_ready",
                 "hotel_strategy_ready",
                 "llm_error",
+                "memory_retrieved",
             }:
                 continue
 
@@ -612,7 +611,6 @@ class MemoryStore(MemoryModule):
         This wraps Groq preference extraction (optional) and HuggingFace embedding
         generation (optional). Failures are intentionally non-fatal.
         """
-
         prefs = _extract_preferences_with_llm(result_payload)
 
         try:
@@ -711,3 +709,27 @@ class MemoryStore(MemoryModule):
         state = self.get_latest_state(run_id=run_id)
         data = asdict(state)
         return data
+
+    def get_user_preferences(self, *, user_id: str) -> dict[str, str]:
+        """Fetch long-term user preferences as a key-value mapping."""
+        try:
+            result = self.supabase.table("user_preferences").select("preference_key,preference_value").eq("user_id", user_id).execute()
+            rows = result.data or []
+            return {row["preference_key"]: row["preference_value"] for row in rows}
+        except Exception:
+            return {}
+
+    def get_relevant_memories(self, *, user_id: str, query_text: str, limit: int = 5) -> list[dict]:
+        """Fetch past relevant memories based on similarity to query text."""
+        embedding = _generate_embedding(query_text)
+        if not embedding:
+            return []
+        
+        try:
+            result = self.supabase.rpc(
+                "match_user_memories",
+                {"query_embedding": embedding, "match_user_id": user_id, "match_count": limit}
+            ).execute()
+            return result.data or []
+        except Exception:
+            return []

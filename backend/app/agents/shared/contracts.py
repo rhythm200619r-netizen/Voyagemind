@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Literal, Protocol
+from typing import Any, Literal, Protocol, TypedDict
 from uuid import uuid4
 
 
@@ -42,6 +42,7 @@ EventType = Literal[
     "flight_strategy_ready",
     "hotel_strategy_ready",
     "llm_error",
+    "memory_retrieved",
 ]
 
 
@@ -94,6 +95,7 @@ class ExecutionPlan:
     ordering: list[str] = field(default_factory=list)
     budget_split: dict[str, int] | None = None
     expected_artifacts: list[str] = field(default_factory=list)
+    plan_summary: str | None = None
 
     @staticmethod
     def new() -> "ExecutionPlan":
@@ -122,7 +124,22 @@ class WorkingState:
     errors: list[str] = field(default_factory=list)
     last_event_id: int | None = None
 
+class FlightOption(TypedDict):
+    airline: str
+    departure: str
+    arrival: str
+    duration_minutes: int
+    stops: int
+    price_usd: float
 
+
+class HotelOption(TypedDict):
+    name: str
+    stars: int
+    review_score: float
+    price_per_night_usd: float
+    address: str
+    url: str
 
 
 

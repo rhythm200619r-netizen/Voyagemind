@@ -78,7 +78,7 @@ export default function HomePage() {
     },
     {
       title: 'Kyoto',
-      subtitle: 'Temples, gardens, quiet luxury',
+      subtitle: 'Temples, gardens, quiet stays',
       src: 'https://images.unsplash.com/photo-1526481280695-3c46949ffc0d?auto=format&fit=crop&w=1400&q=60',
     },
     {
@@ -98,8 +98,8 @@ export default function HomePage() {
       body: 'The planner splits the budget and keeps suggestions within the target you give it.',
     },
     {
-      title: 'Live results',
-      body: 'You can watch the plan come together in real time instead of waiting for one final response.',
+      title: 'Clear progress',
+      body: 'Planning progress is available when you need it, without taking over the booking screen.',
     },
   ]
 
@@ -150,20 +150,20 @@ export default function HomePage() {
 
   return (
     <div className="grid gap-8">
-      <section className="overflow-hidden rounded-[30px] border border-[var(--fog-border)] bg-[linear-gradient(180deg,rgba(10,10,15,0.92),rgba(12,12,18,0.8))] text-[#f5eee5] shadow-[0_24px_70px_rgba(0,0,0,0.28)]">
+      <section className="overflow-hidden rounded-lg border border-[var(--fog-border)] bg-[var(--surface-strong)] text-[#f5eee5] shadow-[0_14px_34px_rgba(0,0,0,0.18)]">
         <div className="grid gap-8 px-6 py-10 md:px-10 md:py-14 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
           <div className="grid gap-5">
             <div className="grid gap-3">
               <div className="display text-xs font-semibold tracking-[0.28em] text-[color:var(--amber)]">VOYAGEMIND</div>
-              <h1 className="display max-w-xl text-4xl font-semibold leading-tight md:text-5xl">Travel planning with the polish of a concierge desk.</h1>
+              <h1 className="display max-w-xl text-4xl font-semibold leading-tight md:text-5xl">Plan a trip with flights, stays, and itinerary together.</h1>
               <p className="max-w-2xl text-sm text-[#f5eee5]/74 md:text-base">
-                Start with a prompt, but experience the page like a curated travel magazine: destination ideas, quick starts,
-                and a premium trip launcher that handles flights, stays, and itinerary in one flow.
+                Enter your route, dates, budget, and preferences. VoyageMind prepares a practical plan with comparable
+                flight and stay options you can review before confirming.
               </p>
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {['Editorial', 'Fast planning', 'Budget aware', 'Private to your account'].map((item) => (
+              {['Flights', 'Stays', 'Itinerary', 'Private to your account'].map((item) => (
                 <span key={item} className="rounded-full border border-[rgba(255,255,255,0.12)] bg-white/5 px-3 py-1 text-xs text-[#f5eee5]/80">
                   {item}
                 </span>
@@ -172,11 +172,11 @@ export default function HomePage() {
 
             <div className="grid gap-3 md:grid-cols-3">
               {[
-                { label: 'Journeys shaped', value: '120+' },
+                { label: 'Sample routes', value: '3' },
                 { label: 'Planning speed', value: '< 30s' },
-                { label: 'Updates', value: 'Live' },
+                { label: 'Progress', value: 'On demand' },
               ].map((stat) => (
-                <div key={stat.label} className="rounded-[18px] border border-[rgba(255,255,255,0.08)] bg-white/5 p-4 backdrop-blur-sm">
+                <div key={stat.label} className="rounded-lg border border-[rgba(255,255,255,0.08)] bg-white/5 p-4">
                   <div className="display text-2xl font-semibold text-white">{stat.value}</div>
                   <div className="mt-1 text-xs uppercase tracking-[0.22em] text-[#f5eee5]/60">{stat.label}</div>
                 </div>
@@ -185,11 +185,11 @@ export default function HomePage() {
           </div>
 
           <div className="grid gap-4">
-            <div className="grid gap-3 rounded-[24px] border border-[rgba(255,255,255,0.1)] bg-white/5 p-4 backdrop-blur-sm">
+            <div className="grid gap-3 rounded-lg border border-[rgba(255,255,255,0.1)] bg-white/5 p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <div className="display text-xs uppercase tracking-[0.22em] text-[color:var(--amber)]">Featured routes</div>
-                  <h2 className="display mt-1 text-2xl text-white">Start from a mood, not a blank box</h2>
+                  <h2 className="display mt-1 text-2xl text-white">Start with a sample trip</h2>
                 </div>
                 <span className="rounded-full border border-[rgba(212,136,58,0.18)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[color:var(--amber)]">
                   Private
@@ -204,9 +204,9 @@ export default function HomePage() {
                     onClick={() => {
                       setPrompt(`Plan a ${trip.meta.toLowerCase().replace(' · ', ' trip focused on ')} under $1200`)
                     }}
-                    className="group grid grid-cols-[92px_1fr] gap-3 rounded-[18px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] p-2 text-left transition hover:border-[rgba(212,136,58,0.24)] hover:bg-[rgba(255,255,255,0.06)]"
+                    className="group grid grid-cols-[92px_1fr] gap-3 rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] p-2 text-left transition hover:border-[rgba(212,136,58,0.24)] hover:bg-[rgba(255,255,255,0.06)]"
                   >
-                    <img src={trip.image} alt={trip.title} className="h-[92px] w-[92px] rounded-[14px] object-cover" loading="lazy" />
+                    <img src={trip.image} alt={trip.title} className="h-[92px] w-[92px] rounded-md object-cover" loading="lazy" />
                     <div className="flex min-w-0 flex-col justify-center pr-2">
                       <div className="display truncate text-base text-white">{trip.title}</div>
                       <div className="mt-1 text-xs text-[#f5eee5]/68">{trip.meta}</div>
@@ -216,7 +216,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="grid gap-3 rounded-[24px] border border-[rgba(255,255,255,0.08)] bg-white/5 p-4 backdrop-blur-sm">
+            <div className="grid gap-3 rounded-lg border border-[rgba(255,255,255,0.08)] bg-white/5 p-4">
               <div className="display text-sm uppercase tracking-[0.22em] text-[color:var(--amber)]">Quick launch</div>
               <label className="grid gap-1">
                 <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[#f5eee5]/60">Your travel prompt</span>
@@ -294,7 +294,7 @@ export default function HomePage() {
                   onClick={() => handleRun(composedPrompt)}
                   disabled={Boolean(isStarting) || missingFields.length > 0}
                 >
-                  {isStarting ? 'Starting…' : 'Plan trip'}
+                  {isStarting ? 'Starting...' : 'Plan trip'}
                 </button>
               </div>
 
@@ -311,7 +311,7 @@ export default function HomePage() {
                 ))}
               </div>
 
-              {error ? <div className="rounded-[16px] border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-100">{error}</div> : null}
+              {error ? <div className="rounded-lg border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-100">{error}</div> : null}
             </div>
           </div>
         </div>
@@ -321,9 +321,9 @@ export default function HomePage() {
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
             <h2 className="display text-2xl font-semibold text-[color:var(--page-text)]">Quick starts</h2>
-            <p className="text-sm text-[color:var(--body-muted)]">Use these as polished starting points rather than generic examples.</p>
+            <p className="text-sm text-[color:var(--body-muted)]">Use a sample, then adjust the route, dates, and budget.</p>
           </div>
-          <div className="text-xs text-[color:var(--body-muted)]">Real photos for destination moodboarding</div>
+          <div className="text-xs text-[color:var(--body-muted)]">Destination examples</div>
         </div>
         <div className="grid gap-3 md:grid-cols-3">
           {quickStarts.map((card) => (
@@ -334,13 +334,13 @@ export default function HomePage() {
                 setPrompt(card.prompt)
                 setBudget(card.budget)
               }}
-              className="overflow-hidden rounded-[22px] border border-[var(--surface-border)] bg-[var(--surface-strong)] text-left transition hover:-translate-y-0.5 hover:border-[rgba(212,136,58,0.28)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.12)]"
+              className="overflow-hidden rounded-lg border border-[var(--surface-border)] bg-[var(--surface-strong)] text-left transition hover:border-[rgba(212,136,58,0.28)] hover:shadow-[0_12px_28px_rgba(0,0,0,0.1)]"
               disabled={isStarting}
             >
               <div className="p-4">
                 <div className="display text-base font-semibold text-[color:var(--page-text)]">{card.title}</div>
                 <div className="mt-1 text-xs uppercase tracking-[0.2em] text-[color:var(--amber)]">{card.meta}</div>
-                <div className="mt-3 text-sm text-[color:var(--body-muted)]">Use this as a seed prompt and refine it after the first result.</div>
+                <div className="mt-3 text-sm text-[color:var(--body-muted)]">Load this request into the planner.</div>
               </div>
             </button>
           ))}
@@ -351,12 +351,12 @@ export default function HomePage() {
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
             <h2 className="display text-2xl font-semibold text-[color:var(--page-text)]">Featured destinations</h2>
-            <p className="text-sm text-[color:var(--body-muted)]">Keep these as mood cards, or turn them into one-click prompt starters.</p>
+            <p className="text-sm text-[color:var(--body-muted)]">Common city ideas for the planner.</p>
           </div>
         </div>
         <div className="grid gap-3 md:grid-cols-3">
           {featuredDestinations.map((img) => (
-            <article key={img.title} className="group overflow-hidden rounded-[22px] border border-[var(--surface-border)] bg-[var(--surface-strong)] transition hover:-translate-y-0.5 hover:border-[rgba(212,136,58,0.28)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.12)]">
+            <article key={img.title} className="group overflow-hidden rounded-lg border border-[var(--surface-border)] bg-[var(--surface-strong)] transition hover:border-[rgba(212,136,58,0.28)] hover:shadow-[0_12px_28px_rgba(0,0,0,0.1)]">
               <img
                 src={img.src}
                 alt={img.title}
@@ -379,7 +379,7 @@ export default function HomePage() {
 
       <section className="grid gap-3 md:grid-cols-3">
         {valueProps.map((item) => (
-          <article key={item.title} className="theme-surface grid gap-2 rounded-[22px] border p-4 shadow-[0_16px_50px_rgba(0,0,0,0.08)]">
+          <article key={item.title} className="theme-surface grid gap-2 rounded-lg border p-4 shadow-[0_10px_24px_rgba(0,0,0,0.08)]">
             <div className="display text-lg text-[color:var(--page-text)]">{item.title}</div>
             <p className="text-sm leading-relaxed text-[color:var(--body-muted)]">{item.body}</p>
           </article>

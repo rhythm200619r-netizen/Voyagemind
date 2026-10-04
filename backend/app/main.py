@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
+
 from datetime import datetime, timezone
 from typing import Any, Literal
 
@@ -7,12 +13,16 @@ from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from app.agents.action.flight_action import _estimated_flights
+from app.agents.action.hotel_action import _estimated_hotels
 from app.agents.orchestrator import run_orchestration
 from app.agents.memory import MemoryStore
+from app.routers.chat import router as chat_router
 from app.settings import settings
 from app.supabase_client import get_supabase_admin_client
 
 app = FastAPI(title="VoyageMind API")
+app.include_router(chat_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -221,6 +231,51 @@ def _get_user_id_from_auth_header(authorization: str | None) -> str:
     return str(user_id)
 
 
+def _backfill_estimated_offers_for_empty_run(*, supabase: Any, run_id: str, user_id: str) -> None:
+    result = (
+        supabase.table("agent_events")
+        .select("payload")
+        .eq("run_id", run_id)
+        .eq("event_type", "result")
+        .order("id", desc=True)
+        .limit(1)
+        .execute()
+    )
+    payload = result.data[0].get("payload") if result.data else {}
+    payload = payload if isinstance(payload, dict) else {}
+
+    destination = payload.get("destination") if isinstance(payload.get("destination"), str) else "Destination"
+    budget = payload.get("budget") if isinstance(payload.get("budget"), int) else None
+    days = payload.get("days") if isinstance(payload.get("days"), int) else 4
+    nights = max(days - 1, 1)
+
+    memory = MemoryStore(supabase=supabase)
+    memory.persist_flight_offers(
+        run_id=run_id,
+        user_id=user_id,
+        destination=destination,
+        flight_options=_estimated_flights(
+            origin="Your city",
+            destination=destination,
+            depart_date="",
+            return_date=None,
+            flight_budget=int(budget * 0.4) if isinstance(budget, int) else None,
+        ),
+    )
+    memory.persist_hotel_offers(
+        run_id=run_id,
+        user_id=user_id,
+        destination=destination,
+        hotel_options=_estimated_hotels(
+            destination=destination,
+            checkin_date="",
+            checkout_date="",
+            nights=nights,
+            hotel_budget=int(budget * 0.35) if isinstance(budget, int) else None,
+        ),
+    )
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -295,22 +350,22 @@ def create_run(
 
     run_id = created.data[0]["id"]
 
-    def safe_runner() -> None:
+    async def safe_runner(supabase_client: Client, run_id_str: str, prompt_str: str, u_id: str | None) -> None:
         try:
-            run_orchestration(supabase=supabase, run_id=run_id, prompt=req.prompt, user_id=user_id)
+            await run_orchestration(supabase=supabase_client, run_id=run_id_str, prompt=prompt_str, user_id=u_id)
         except Exception as exc:  # noqa: BLE001
-            supabase.table("agent_events").insert(
+            supabase_client.table("agent_events").insert(
                 {
-                    "run_id": run_id,
+                    "run_id": run_id_str,
                     "agent_name": "Orchestrator",
                     "event_type": "error",
                     "content": str(exc),
                     "payload": {},
                 }
             ).execute()
-            supabase.table("agent_runs").update({"status": "failed"}).eq("id", run_id).execute()
+            supabase_client.table("agent_runs").update({"status": "failed"}).eq("id", run_id_str).execute()
 
-    background.add_task(safe_runner)
+    background.add_task(safe_runner, supabase, run_id, req.prompt, user_id)
 
     return CreateRunResponse(run_id=run_id)
 
@@ -349,7 +404,7 @@ def get_run_offers(run_id: str, authorization: str | None = Header(default=None)
     try:
         run_check = (
             supabase.table("agent_runs")
-            .select("id,booked,booked_at,selected_flight_offer_id,selected_hotel_offer_id")
+            .select("id,status,booked,booked_at,selected_flight_offer_id,selected_hotel_offer_id")
             .eq("id", run_id)
             .eq("user_id", user_id)
             .maybe_single()
@@ -394,6 +449,39 @@ def get_run_offers(run_id: str, authorization: str | None = Header(default=None)
     except Exception as exc:  # noqa: BLE001
         print(f"Error fetching hotel offers: {exc}")
         next_hotel_rows = []
+
+    if (
+        run_row.get("status") == "completed"
+        and not next_flight_rows
+        and not next_hotel_rows
+        and not run_row.get("booked")
+    ):
+        try:
+            _backfill_estimated_offers_for_empty_run(supabase=supabase, run_id=run_id, user_id=user_id)
+            flight_rows = (
+                supabase.table("flight_offers")
+                .select(
+                    "id,created_at,provider,provider_offer_id,rank,destination,route,depart_date,return_date,depart_time,arrive_time,carrier,stops,price_usd,currency,raw_payload"
+                )
+                .eq("run_id", run_id)
+                .eq("user_id", user_id)
+                .order("rank", desc=False)
+                .execute()
+            )
+            hotel_rows = (
+                supabase.table("hotel_offers")
+                .select(
+                    "id,created_at,provider,provider_offer_id,rank,hotel_name,city,area,check_in,check_out,nights,nightly_usd,total_usd,rating,currency,raw_payload"
+                )
+                .eq("run_id", run_id)
+                .eq("user_id", user_id)
+                .order("rank", desc=False)
+                .execute()
+            )
+            next_flight_rows = flight_rows.data or []
+            next_hotel_rows = hotel_rows.data or []
+        except Exception as exc:  # noqa: BLE001
+            print(f"Error backfilling estimated offers: {exc}")
 
     try:
         flight_offers = []

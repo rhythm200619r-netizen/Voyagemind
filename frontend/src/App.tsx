@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom'
 
+import ChatWidget from './components/ChatWidget'
 import ProtectedRoute from './components/ProtectedRoute'
 import PublicOnlyRoute from './components/PublicOnlyRoute'
 import Shell from './layout/Shell'
@@ -104,6 +105,7 @@ export default function App() {
           />
         </Routes>
       </Shell>
+      <ChatWidget />
     </BrowserRouter>
   )
 }

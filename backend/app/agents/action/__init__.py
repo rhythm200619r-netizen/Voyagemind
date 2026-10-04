@@ -16,9 +16,15 @@ def unpack_action_artifacts(action_artifacts: list[ActionArtifact]) -> tuple[lis
         if artifact.artifact_type == "itinerary":
             itinerary = payload.get("itinerary") if isinstance(payload.get("itinerary"), list) else []
         elif artifact.artifact_type == "flights":
-            flight_options = payload.get("flight_options") if isinstance(payload.get("flight_options"), list) else []
+            options = payload.get("flight_options")
+            if not isinstance(options, list):
+                options = payload.get("flights")
+            flight_options = options if isinstance(options, list) else []
         elif artifact.artifact_type == "hotels":
-            hotel_options = payload.get("hotel_options") if isinstance(payload.get("hotel_options"), list) else []
+            options = payload.get("hotel_options")
+            if not isinstance(options, list):
+                options = payload.get("hotels")
+            hotel_options = options if isinstance(options, list) else []
 
     return itinerary, flight_options, hotel_options
 

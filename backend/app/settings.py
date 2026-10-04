@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     # Requests that need Supabase will return a clear error.
     supabase_url: str = ""
     supabase_service_role_key: str = ""
+    
+    gemini_api_key: str = ""
+    rapidapi_key: str = ""
 
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

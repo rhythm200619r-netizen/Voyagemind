@@ -351,7 +351,7 @@ export default function TripDetailsPage() {
           setBookingError(null)
           setBookingMessage(null)
         }}
-        className={`rounded-[18px] border p-3 text-left transition ${
+        className={`rounded-lg border p-3 text-left transition ${
           selected
             ? 'border-[rgba(212,136,58,0.45)] bg-[rgba(212,136,58,0.08)]'
             : 'border-[var(--fog-border)] hover:border-[rgba(212,136,58,0.22)]'
@@ -402,7 +402,7 @@ export default function TripDetailsPage() {
           setBookingError(null)
           setBookingMessage(null)
         }}
-        className={`rounded-[18px] border p-3 text-left transition ${
+        className={`rounded-lg border p-3 text-left transition ${
           selected
             ? 'border-[rgba(212,136,58,0.45)] bg-[rgba(212,136,58,0.08)]'
             : 'border-[var(--fog-border)] hover:border-[rgba(212,136,58,0.22)]'
@@ -435,7 +435,7 @@ export default function TripDetailsPage() {
     <div className="grid gap-6">
       <section className="grid gap-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="display text-3xl font-semibold text-[#f5eee5]">Trip details</h1>
+          <h1 className="display text-3xl font-semibold text-[color:var(--page-text)]">Your trip plan</h1>
           <Link
             to="/my-trips"
             className="text-sm font-medium text-[color:var(--amber)] underline decoration-[rgba(212,136,58,0.32)] underline-offset-4 transition hover:text-[#f7c57f]"
@@ -443,23 +443,21 @@ export default function TripDetailsPage() {
             My Trips
           </Link>
         </div>
-        <div className="text-sm text-[color:var(--muted)]">
-          Trip ID: <span className="font-mono text-xs text-[#f5eee5]/80">{runId}</span>
-        </div>
+        <div className="text-sm text-[color:var(--muted)]">Review the itinerary, compare options, and lock your booking.</div>
       </section>
 
-      {error ? <div className="rounded-[18px] border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-100">{error}</div> : null}
+      {error ? <div className="rounded-lg border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-100">{error}</div> : null}
 
-      <section className="grid gap-3 rounded-[24px] border border-[var(--fog-border)] bg-[var(--fog)] p-4 shadow-[0_16px_50px_rgba(0,0,0,0.12)] transition hover:border-[rgba(212,136,58,0.22)]">
+      <section className="grid gap-3 rounded-lg border border-[var(--fog-border)] bg-[var(--fog)] p-4 shadow-[0_10px_28px_rgba(0,0,0,0.1)] transition hover:border-[rgba(212,136,58,0.22)]">
         {isLoading ? (
-          <div className="text-sm text-[#f5eee5]/62">Loading…</div>
+          <div className="text-sm text-[color:var(--muted)]">Loading...</div>
         ) : run ? (
           <>
-            <div className="display text-sm uppercase tracking-[0.22em] text-[color:var(--amber)]">Prompt</div>
-            <div className="whitespace-pre-wrap text-sm text-[#f5eee5]">{formatPrompt(run.prompt)}</div>
+            <div className="display text-sm uppercase tracking-[0.22em] text-[color:var(--amber)]">Trip request</div>
+            <div className="whitespace-pre-wrap text-sm text-[color:var(--page-text)]">{formatPrompt(run.prompt)}</div>
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[color:var(--muted)]">
               <span>{new Date(run.created_at).toLocaleString()}</span>
-              <span>Status: {run.status}</span>
+              <span>{run.status === 'completed' ? 'Plan ready' : run.status === 'failed' ? 'Needs attention' : 'Preparing plan'}</span>
             </div>
           </>
         ) : (
@@ -467,13 +465,15 @@ export default function TripDetailsPage() {
         )}
       </section>
 
-      <section className="rounded-[24px] border border-[var(--fog-border)] bg-[var(--fog)] shadow-[0_16px_50px_rgba(0,0,0,0.14)]">
-        <div className="flex items-center justify-between border-b border-[var(--fog-border)] p-4">
-          <h2 className="display text-sm font-semibold text-[#f5eee5]">Live updates</h2>
-          <span className="text-xs text-[color:var(--muted)]">Streaming via Supabase Realtime</span>
-        </div>
+      <details className="rounded-lg border border-[var(--fog-border)] bg-[var(--fog)] shadow-[0_8px_22px_rgba(0,0,0,0.08)]">
+        <summary className="cursor-pointer list-none p-4 text-sm font-semibold text-[color:var(--page-text)]">
+          Planning progress
+          <span className="ml-3 text-xs font-normal text-[color:var(--muted)]">
+            {run && (run.status === 'running' || run.status === 'queued') ? 'Preparing now' : 'View preparation steps'}
+          </span>
+        </summary>
 
-        <div className="p-4">
+        <div className="border-t border-[var(--fog-border)] p-4">
           <AgentEventFeed
             events={events}
             isStreaming={Boolean(run && (run.status === 'running' || run.status === 'queued'))}
@@ -481,44 +481,44 @@ export default function TripDetailsPage() {
           />
           <div ref={bottomRef} />
         </div>
-      </section>
+      </details>
 
-      <section className="grid gap-3 rounded-[24px] border border-[var(--fog-border)] bg-[var(--fog)] p-4 shadow-[0_16px_50px_rgba(0,0,0,0.12)]">
+      <section className="grid gap-3 rounded-lg border border-[var(--fog-border)] bg-[var(--fog)] p-4 shadow-[0_10px_28px_rgba(0,0,0,0.1)]">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="display text-sm font-semibold text-[#f5eee5]">Stored offers</h2>
-          <span className="text-xs text-[color:var(--muted)]">Loaded from the database</span>
+          <h2 className="display text-base font-semibold text-[color:var(--page-text)]">Choose flights and stay</h2>
+          <span className="text-xs text-[color:var(--muted)]">Select one of each to continue</span>
         </div>
 
         {run?.booked ? (
-          <div className="rounded-[18px] border border-emerald-400/20 bg-emerald-500/10 p-3 text-sm text-emerald-100">
+          <div className="rounded-lg border border-emerald-400/20 bg-emerald-500/10 p-3 text-sm text-emerald-100">
             This trip is booked and locked. The selections below are read-only.
             {run.booked_at ? <div className="mt-1 text-xs text-emerald-100/75">Booked at {new Date(run.booked_at).toLocaleString()}</div> : null}
           </div>
         ) : null}
 
         {offersError ? (
-          <div className="rounded-[14px] border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-100">
-            Could not load stored offers yet: {offersError}
+          <div className="rounded-lg border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-100">
+            Could not load options yet: {offersError}
           </div>
         ) : null}
 
         {bookingError ? (
-          <div className="rounded-[14px] border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-100">
+          <div className="rounded-lg border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-100">
             {bookingError}
           </div>
         ) : null}
 
         {bookingMessage ? (
-          <div className="rounded-[14px] border border-emerald-400/20 bg-emerald-500/10 p-3 text-sm text-emerald-100">
+          <div className="rounded-lg border border-emerald-400/20 bg-emerald-500/10 p-3 text-sm text-emerald-100">
             {bookingMessage}
           </div>
         ) : null}
 
-        <div className="grid gap-3 rounded-[18px] border border-[var(--fog-border)] bg-[rgba(255,255,255,0.02)] p-4 shadow-[0_8px_28px_rgba(0,0,0,0.08)]">
+        <div className="grid gap-3 rounded-lg border border-[var(--fog-border)] bg-[rgba(255,255,255,0.02)] p-4 shadow-[0_8px_20px_rgba(0,0,0,0.06)]">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <div className="text-xs uppercase tracking-[0.22em] text-[color:var(--amber)]">Booking</div>
-              <div className="mt-1 text-sm text-[color:var(--page-text)]">Pick one flight and one hotel, then confirm once.</div>
+              <div className="text-xs uppercase tracking-[0.22em] text-[color:var(--amber)]">Selection</div>
+              <div className="mt-1 text-sm text-[color:var(--page-text)]">Pick one flight and one stay, then confirm.</div>
             </div>
             <button
               type="button"
@@ -526,7 +526,7 @@ export default function TripDetailsPage() {
               disabled={isBooked || isBooking || !selectedFlightOfferId || !selectedHotelOfferId}
               className="vm-primary-button shrink-0 px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isBooked ? 'Booked' : isBooking ? 'Booking…' : 'Confirm booking'}
+              {isBooked ? 'Booked' : isBooking ? 'Booking...' : 'Confirm booking'}
             </button>
           </div>
 
@@ -540,7 +540,7 @@ export default function TripDetailsPage() {
           </div>
 
           {!selectedFlightOfferId || !selectedHotelOfferId ? (
-            <div className="text-xs text-[color:var(--body-muted)]">The booking button appears once both selections are made.</div>
+            <div className="text-xs text-[color:var(--body-muted)]">Confirm booking turns on after both selections are made.</div>
           ) : null}
 
           {run?.booked_at ? <div className="text-xs text-emerald-100/85">Booked at {new Date(run.booked_at).toLocaleString()}</div> : null}
@@ -558,33 +558,33 @@ export default function TripDetailsPage() {
                   {offers.flight_offers.map((offer) => renderFlightCard(offer))}
                 </div>
               ) : (
-                <div className="text-sm text-[color:var(--body-muted)]">No flight offers stored yet.</div>
+                <div className="rounded-lg border border-[var(--fog-border)] p-3 text-sm text-[color:var(--body-muted)]">Flight options are still being prepared for this trip.</div>
               )}
             </div>
 
             <div className="grid gap-2">
               <div className="flex items-center justify-between gap-3">
                 <div className="text-xs uppercase tracking-[0.22em] text-[color:var(--amber)]">Hotels</div>
-                <div className="text-xs text-[color:var(--body-muted)]">Pick one hotel option</div>
+                <div className="text-xs text-[color:var(--body-muted)]">Pick one stay option</div>
               </div>
               {offers.hotel_offers.length > 0 ? (
                 <div className="grid gap-2">
                   {offers.hotel_offers.map((offer) => renderHotelCard(offer))}
                 </div>
               ) : (
-                <div className="text-sm text-[color:var(--body-muted)]">No hotel offers stored yet.</div>
+                <div className="rounded-lg border border-[var(--fog-border)] p-3 text-sm text-[color:var(--body-muted)]">Stay options are still being prepared for this trip.</div>
               )}
             </div>
 
-            <div className="grid gap-3 rounded-[18px] border border-[var(--fog-border)] p-4">
+            <div className="grid gap-3 rounded-lg border border-[var(--fog-border)] p-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="text-xs uppercase tracking-[0.22em] text-[color:var(--amber)]">Selections</div>
-                <div className="text-xs text-[color:var(--body-muted)]">Cards are clickable</div>
+                <div className="text-xs text-[color:var(--body-muted)]">Your selected flight and stay appear above</div>
               </div>
             </div>
           </div>
         ) : (
-          <div className="text-sm text-[color:var(--body-muted)]">Offers will appear here once the run writes them to the database.</div>
+          <div className="text-sm text-[color:var(--body-muted)]">Options will appear here as soon as planning finishes.</div>
         )}
       </section>
     </div>

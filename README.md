@@ -209,8 +209,11 @@ Why polling exists:
 - Keep service-role usage server-side only.
 - Do not commit real secrets in `.env` files.
 
-## Next Improvements
-- Replace rule-based orchestration with tool-connected agents (LLM + providers)
-- Move all frontend trip reads to backend `/runs` APIs for one access path
-- Add real provider integrations for flights/hotels and pricing freshness
-- Wire real embeddings + retrieval for user memory
+## Accomplished So Far
+- Replaced rule-based orchestration with tool-connected agents (LLM + providers via `PromptProfiler`, `TripPlanner`, etc.)
+- Added real provider integrations for flights (Skyscanner via Sky Scrapper) and hotels (Booking.com) using RapidAPI, providing fresh pricing.
+- Added backend APIs (`/runs` and `/runs/{run_id}/offers`) to consolidate trip data reads.
+
+## Next Improvements (To Do)
+- Wire real embeddings + retrieval for user memory (currently using a deterministic placeholder `_placeholder_embedding_1536`).
+- Ensure all frontend components exclusively use the backend `/runs` APIs for trip reads (move away from direct Supabase Realtime reads for historical data if any remain).

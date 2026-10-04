@@ -41,6 +41,30 @@ function agentNameForEvent(event: AgentEvent): string {
   return event.agent_name || 'Agent'
 }
 
+function labelForEventType(eventType: string): string {
+  switch (eventType) {
+    case 'run_started':
+      return 'Started'
+    case 'agent_task':
+      return 'Preparing'
+    case 'agent_report':
+      return 'Ready'
+    case 'agent_decision':
+      return 'Updated'
+    case 'flight_strategy_ready':
+      return 'Flights'
+    case 'hotel_strategy_ready':
+      return 'Hotels'
+    case 'run_completed':
+    case 'result':
+      return 'Complete'
+    case 'error':
+      return 'Needs attention'
+    default:
+      return 'Update'
+  }
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' ? (value as Record<string, unknown>) : null
 }
@@ -86,7 +110,7 @@ function FlightOptions({ payload }: { payload: Record<string, unknown> }) {
           const price = getNumber(option.price_usd)
 
           return (
-            <div key={`${carrier}-${index}`} className="rounded-[18px] border border-[var(--surface-border)] bg-[color:var(--surface-soft)] p-3">
+            <div key={`${carrier}-${index}`} className="rounded-lg border border-[var(--surface-border)] bg-[color:var(--surface-soft)] p-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="display truncate text-sm text-[color:var(--page-text)]">{carrier}</div>
@@ -134,7 +158,7 @@ function HotelOptions({ payload }: { payload: Record<string, unknown> }) {
           const perks = getStringArray(option.perks)
 
           return (
-            <div key={`${name}-${index}`} className="rounded-[18px] border border-[var(--surface-border)] bg-[color:var(--surface-soft)] p-3">
+            <div key={`${name}-${index}`} className="rounded-lg border border-[var(--surface-border)] bg-[color:var(--surface-soft)] p-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="display truncate text-sm text-[color:var(--page-text)]">{name}</div>
@@ -173,7 +197,7 @@ export default function AgentEventFeed({ events, isStreaming, agentDescriptions 
   return (
     <div className="grid gap-3">
       {latestResult ? (
-        <div className="theme-surface grid gap-3 rounded-[22px] border p-4 shadow-[0_16px_50px_rgba(0,0,0,0.16)]">
+        <div className="theme-surface grid gap-3 rounded-lg border p-4 shadow-[0_10px_28px_rgba(0,0,0,0.12)]">
           <div className="flex items-center justify-between gap-3">
             <div className="display text-sm text-[color:var(--page-text)]">Trip plan</div>
             {latestResult.event_type === 'result' ? (
@@ -184,7 +208,7 @@ export default function AgentEventFeed({ events, isStreaming, agentDescriptions 
           </div>
 
           {latestResultPayload ? (
-            <div className="grid gap-2 rounded-[18px] border border-[var(--surface-border)] bg-[color:var(--surface-soft)] p-3 text-sm text-[color:var(--page-text)]">
+            <div className="grid gap-2 rounded-lg border border-[var(--surface-border)] bg-[color:var(--surface-soft)] p-3 text-sm text-[color:var(--page-text)]">
               <div className="flex flex-wrap items-center gap-3 text-xs text-[color:var(--body-muted)]">
                 {getString(latestResultPayload.destination) ? <span>Destination: {getString(latestResultPayload.destination)}</span> : null}
                 {getNumber(latestResultPayload.days) ? <span>{getNumber(latestResultPayload.days)} days</span> : null}
@@ -203,7 +227,7 @@ export default function AgentEventFeed({ events, isStreaming, agentDescriptions 
               {itinerary.map((item) => (
                 <div
                   key={item.day}
-                  className="rounded-[18px] border border-[var(--surface-border)] bg-[color:var(--surface-soft)] p-3 text-sm text-[color:var(--page-text)]"
+                  className="rounded-lg border border-[var(--surface-border)] bg-[color:var(--surface-soft)] p-3 text-sm text-[color:var(--page-text)]"
                 >
                   <div className="font-semibold text-[color:var(--page-text)]">
                     Day {item.day}
@@ -225,7 +249,7 @@ export default function AgentEventFeed({ events, isStreaming, agentDescriptions 
       ) : null}
 
       <div className="flex items-center justify-between">
-        <h3 className="display text-lg text-[color:var(--page-text)]">Live updates</h3>
+        <h3 className="display text-sm font-semibold text-[color:var(--page-text)]">Planner timeline</h3>
         {isStreaming ? <TypingIndicator /> : null}
       </div>
 
@@ -233,7 +257,7 @@ export default function AgentEventFeed({ events, isStreaming, agentDescriptions 
         {sortedEvents.map((event) => {
           const agentName = agentNameForEvent(event)
           const status = agentStatusForEvent(event)
-          const description = agentDescriptions[agentName] ?? 'AI agent activity'
+          const description = agentDescriptions[agentName] ?? 'Planning activity'
           const content = event.content ?? ''
 
           return (
@@ -244,13 +268,13 @@ export default function AgentEventFeed({ events, isStreaming, agentDescriptions 
               animate={{ opacity: 1, x: 0, scale: 1 }}
               exit={{ opacity: 0, x: -20, scale: 0.97 }}
               transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-              className="theme-surface grid gap-3 rounded-[22px] border p-4 shadow-[0_16px_50px_rgba(0,0,0,0.14)]"
+              className="theme-surface grid gap-3 rounded-lg border p-4 shadow-[0_8px_20px_rgba(0,0,0,0.1)]"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-start gap-3">
                   <AgentOrb status={status} />
                   <div className="min-w-0">
-                    <InfoPopover title={agentName} badge="AI Agent" description={description}>
+                    <InfoPopover title={agentName} badge="Planner" description={description}>
                       <span className="display cursor-help text-sm text-[color:var(--page-text)] underline decoration-dotted decoration-[color:var(--amber)] underline-offset-4">
                         {agentName}
                       </span>
@@ -261,7 +285,7 @@ export default function AgentEventFeed({ events, isStreaming, agentDescriptions 
                   </div>
                 </div>
                 <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ring-1 ${badgeClassForEventType(event.event_type)}`}>
-                  {event.event_type}
+                  {labelForEventType(event.event_type)}
                 </span>
               </div>
 

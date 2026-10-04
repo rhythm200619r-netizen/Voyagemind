@@ -341,3 +341,30 @@ create policy user_preferences_delete_own
   on public.user_preferences
   for delete
   using (auth.uid() = user_id);
+
+-- Function to match user memories by semantic similarity
+create or replace function public.match_user_memories (
+  query_embedding vector(384),
+  match_user_id uuid,
+  match_count int default 5
+) returns table (
+  id uuid,
+  content text,
+  metadata jsonb,
+  similarity float
+)
+language plpgsql
+as $$
+begin
+  return query
+  select
+    user_memories.id,
+    user_memories.content,
+    user_memories.metadata,
+    1 - (user_memories.embedding <=> query_embedding) as similarity
+  from public.user_memories
+  where user_id = match_user_id
+  order by user_memories.embedding <=> query_embedding
+  limit match_count;
+end;
+$$;
